@@ -20,19 +20,6 @@ export function Header() {
     }
 }
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'candidate':
-        return 'Candidato'
-      case 'professor':
-        return 'Professor'
-      case 'admin':
-        return 'Administrador'
-      default:
-        return role
-    }
-  }
-
   return (
     <header className="bg-white border-b border-secondary-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -53,10 +40,7 @@ export function Header() {
           <div className="flex items-center space-x-3">
             <div className="text-right">
               <p className="text-sm font-medium text-secondary-900">
-                {user?.name}
-              </p>
-              <p className="text-xs text-secondary-600">
-                {getRoleLabel(user?.role || '')}
+                {user?.email}
               </p>
             </div>
             <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center">

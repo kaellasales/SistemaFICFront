@@ -1,49 +1,79 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Logo } from '@/components/ui/Logo'
-import { authService } from '@/shared/services/authService'
+import api from '@/shared/services/api'
+import toast from 'react-hot-toast'
 
-const registerSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  cpf: z.string().min(11, 'CPF deve ter 11 dígitos'),
-  phone: z.string().optional(),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-  confirmPassword: z.string(),
-  isIFCEStudent: z.boolean().default(false),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Senhas não coincidem",
-  path: ["confirmPassword"],
-})
+const registerSchema = z
+  .object({
+    first_name: z.string().min(2, 'Primeiro nome deve ter pelo menos 2 caracteres'),
+    last_name: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
+    email: z.string().email('Email inválido'),
+    password: z
+      .string()
+      .min(6, 'Senha deve ter pelo menos 6 caracteres')
+      .regex(/^(?=.*[A-Za-z0-9]).*$/, 'Senha deve conter letras e números'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Senhas não coincidem',
+    path: ['confirmPassword'],
+  })
 
 type RegisterForm = z.infer<typeof registerSchema>
 
 export function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [emailError, setEmailError] = useState('')
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
+    reset, // <- adiciona isso
   } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
   })
 
+  // Reatividade: limpa erros globais e de email ao digitar
+  const handleInputChange = (field?: string) => {
+    if (error && !field) setError('')
+    if (field === 'email' && emailError) setEmailError('')
+  }
+
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true)
     setError('')
-    
+    setEmailError('')
+
     try {
-      await authService.registerCandidate(data)
-      setSuccess(true)
-    } catch (error: any) {
-      setError(error.response?.data?.message || 'Erro ao cadastrar candidato')
-    } finally {
+      await api.post('/registro/aluno/', {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        password: data.password,
+      })
+      toast.success('Cadastro realizado com sucesso!')
+      reset()
+      setTimeout(() => navigate('/login'), 2000)
+
+    }catch (err: any) {
+      const msg = err.response?.data?.message || 'Erro ao cadastrar usuário'
+
+      
+      if (msg.toLowerCase().includes('email')) {
+        setEmailError('Este email já está cadastrado') 
+      } else {
+        setError(msg)
+      }
+    }finally {
       setIsLoading(false)
     }
   }
@@ -62,8 +92,8 @@ export function RegisterPage() {
             <p className="text-gray-600 mb-6">
               Seu cadastro foi realizado com sucesso. Agora você pode fazer login.
             </p>
-            <Link 
-              to="/login" 
+            <Link
+              to="/login"
               className="bg-green-800 text-white py-2 px-4 rounded-md font-medium hover:bg-green-900 transition-colors"
             >
               Ir para Login
@@ -77,39 +107,47 @@ export function RegisterPage() {
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Container principal com borda verde */}
         <div className="border-2 border-green-800 rounded-lg p-8 bg-white">
-          {/* Título */}
           <h1 className="text-2xl font-bold text-green-800 text-center mb-6">
             Faça seu cadastro
           </h1>
 
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="w-16 h-16 border-2 border-green-800 rounded-full flex items-center justify-center bg-white">
               <Logo size="md" />
             </div>
           </div>
 
-          {/* Mensagem de erro */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
               {error}
             </div>
           )}
 
-          {/* Formulário */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Nome */}
+            {/* Primeiro Nome */}
             <div>
               <input
                 type="text"
-                placeholder="Nome completo"
+                placeholder="Primeiro nome"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('name')}
+                {...register('first_name', { onChange: () => handleInputChange() })}
               />
-              {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
+              {errors.first_name && (
+                <p className="text-red-500 text-xs mt-1">{errors.first_name.message}</p>
+              )}
+            </div>
+
+            {/* Sobrenome */}
+            <div>
+              <input
+                type="text"
+                placeholder="Sobrenome"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                {...register('last_name', { onChange: () => handleInputChange() })}
+              />
+              {errors.last_name && (
+                <p className="text-red-500 text-xs mt-1">{errors.last_name.message}</p>
               )}
             </div>
 
@@ -119,36 +157,10 @@ export function RegisterPage() {
                 type="email"
                 placeholder="Email"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('email')}
+                {...register('email', { onChange: () => handleInputChange('email') })}
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-              )}
-            </div>
-
-            {/* CPF */}
-            <div>
-              <input
-                type="text"
-                placeholder="CPF (apenas números)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('cpf')}
-              />
-              {errors.cpf && (
-                <p className="text-red-500 text-xs mt-1">{errors.cpf.message}</p>
-              )}
-            </div>
-
-            {/* Telefone */}
-            <div>
-              <input
-                type="tel"
-                placeholder="Telefone (opcional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('phone')}
-              />
-              {errors.phone && (
-                <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+              {(errors.email || emailError) && (
+                <p className="text-red-500 text-xs mt-1">{errors.email?.message || emailError}</p>
               )}
             </div>
 
@@ -158,7 +170,7 @@ export function RegisterPage() {
                 type="password"
                 placeholder="Senha"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('password')}
+                {...register('password', { onChange: () => handleInputChange() })}
               />
               {errors.password && (
                 <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
@@ -171,27 +183,13 @@ export function RegisterPage() {
                 type="password"
                 placeholder="Confirmar senha"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('confirmPassword')}
+                {...register('confirmPassword', { onChange: () => handleInputChange() })}
               />
               {errors.confirmPassword && (
                 <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
               )}
             </div>
 
-            {/* Checkbox */}
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="isIFCEStudent"
-                className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                {...register('isIFCEStudent')}
-              />
-              <label htmlFor="isIFCEStudent" className="text-sm text-gray-700">
-                É aluno do IFCE?
-              </label>
-            </div>
-
-            {/* Botão de confirmação */}
             <button
               type="submit"
               disabled={isLoading}
@@ -201,18 +199,11 @@ export function RegisterPage() {
             </button>
           </form>
 
-          {/* Links */}
           <div className="mt-6 space-y-2 text-center">
             <p className="text-sm text-gray-600">
               Já tem uma conta?{' '}
               <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
                 Entre aqui
-              </Link>
-            </p>
-            <p className="text-sm text-gray-600">
-              É professor?{' '}
-              <Link to="/register/professor" className="text-green-600 hover:text-green-700 font-medium">
-                Cadastre-se como professor
               </Link>
             </p>
           </div>

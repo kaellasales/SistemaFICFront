@@ -1,6 +1,6 @@
 import api from './api'
 import { User, UserRole, RegisterForm } from '@/shared/types'
-
+import { useAuthStore } from '../stores/authStore'
 export interface AdminRegisterForm {
   name: string
   email: string
@@ -68,11 +68,39 @@ class AuthService {
     return response.data
   }
 
-  // Login para qualquer tipo de usuário
+
   async login(email: string, password: string) {
-    const response = await api.post('/auth/login', { email, password })
-    return response.data
+    const response = await api.post('/token/', { email, password })
+    const { access_token, refresh_token } = response.data
+
+    // obter dados do usuário logado
+    const user = await this.me()
+
+    // atualizar o Zustand store
+    useAuthStore.getState().login(user, access_token, refresh_token)
+
+      return { user, access_token, refresh_token }
+    }
+
+  async logout() {
+    const refreshToken = localStorage.getItem('refresh_token')
+    if (!refreshToken) return
+
+    try {
+      await api.post('/logout/', { refresh: refreshToken }, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('access_token')}`
+        }
+      })
+    } catch {
+      // mesmo que falhe, removemos tokens
+    } finally {
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      useAuthStore.getState().logout() // limpa Zustand store
+    }
   }
+
 
   // Verificar se email já existe
   async checkEmailExists(email: string) {
@@ -148,6 +176,9 @@ class AuthService {
     })
     return response.data
   }
+
 }
+
+
 
 export const authService = new AuthService()

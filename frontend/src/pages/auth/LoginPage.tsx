@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useAuthStore } from '@/shared/stores/authStore'
 import { Logo } from '@/components/ui/Logo'
+import api from "@/shared/services/api"
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -26,106 +27,94 @@ export function LoginPage() {
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
   })
-
+  
+  const [loginError, setLoginError] = useState<string | null>(null)
+  
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true)
+    setLoginError(null)
+
     try {
-      // Simular login - em produção, isso seria uma chamada para a API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Determinar role baseado no email
-      let role: 'candidate' | 'professor' | 'admin' = 'candidate'
-      let name = 'Usuário Teste'
-      
-      if (data.email.includes('@ifce.edu.br')) {
-        role = 'professor'
-        // Extrair nome do email (parte antes do @)
-        const emailName = data.email.split('@')[0]
-        name = `Prof. ${emailName.charAt(0).toUpperCase() + emailName.slice(1)}`
-      } else if (data.email.includes('admin')) {
-        role = 'admin'
-        name = 'Administrador'
-      } else if (data.email === 'joao@ifce.edu.br') {
-        role = 'professor'
-        name = 'Prof. Joao'
-      }
-      
-      // Mock de usuário - em produção, viria da API
-      const mockUser = {
-        id: '1',
-        name: name,
+      // 1. pega access e refresh
+      const tokenResponse = await api.post("/token/", {
         email: data.email,
-        cpf: '123.456.789-00',
-        phone: '(85) 99999-9999',
-        role: role,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      
-      const mockToken = 'mock-jwt-token'
-      
-      login(mockUser, mockToken)
-      
-      // Redirecionar para a página que o usuário tentou acessar ou dashboard
-      const from = location.state?.from?.pathname || (role === 'professor' ? '/professor-dashboard' : '/dashboard')
+        password: data.password,
+      })
+
+      const { access, refresh } = tokenResponse.data
+
+      // 2. busca os dados do usuário em /me
+      const meResponse = await api.get("/me", {
+        headers: {
+          Authorization: `Bearer ${access}`,
+        },
+      })
+
+      const user = meResponse.data
+
+      // 3. salva no store
+      login(user, access, refresh)
+
+      // 4. decide rota
+      const from =
+        location.state?.from?.pathname ||
+        (user.roles?.includes("PROFESSOR") ? "/professor-dashboard" : "/dashboard")
+
       navigate(from, { replace: true })
-    } catch (error) {
-      console.error('Erro no login:', error)
+
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setLoginError("Usuário ou senha inválidos")
+      } else {
+        setLoginError("Erro ao conectar com o servidor")
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
+  const handleInputChange = () => {
+    if (loginError) setLoginError(null)
+  }
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Seção Esquerda - Imagem */}
+      {/* Esquerda */}
       <div className="hidden lg:flex lg:w-3/5 relative bg-white border-t-4 border-r-4 border-b-4 border-green-800 rounded-r-2xl">
-        {/* Imagem no cantinho */}
         <div className="absolute bottom-0 left-0 w-[28rem] h-[28rem]">
-          <img 
-            src="/tela.png" 
-            alt="MatriFIC" 
-            className="w-full h-full object-cover"
-          />
+          <img src="/tela.png" alt="MatriFIC" className="w-full h-full object-cover"/>
         </div>
-        
-        {/* Texto centralizado */}
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-6xl font-bold text-green-800 leading-tight">
-              Seu app para<br />
-              Cursos Fic!
+              Seu app para<br />Cursos Fic!
             </h1>
           </div>
         </div>
       </div>
 
-      {/* Seção Direita - Formulário de Login */}
+      {/* Direita */}
       <div className="w-full lg:w-2/5 flex items-center justify-center p-12">
         <div className="w-full max-w-md">
-          {/* Título */}
           <h2 className="text-2xl font-bold text-green-800 mb-8 text-center">
             Bem-Vindo ao MatriFIC!
           </h2>
 
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="w-20 h-20 border-4 border-green-800 rounded-full flex items-center justify-center bg-white">
               <Logo size="lg" />
             </div>
           </div>
 
-
-
-          {/* Formulário */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <input
                 type="email"
                 placeholder="Email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('email')}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
+                {...register('email', { onChange: handleInputChange })}
               />
               {errors.email && (
                 <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
@@ -136,13 +125,21 @@ export function LoginPage() {
               <input
                 type="password"
                 placeholder="Senha"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('password')}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${
+                  errors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
+                {...register('password', { onChange: handleInputChange })}
               />
               {errors.password && (
                 <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
               )}
             </div>
+            
+            {loginError && (
+              <p className="text-red-500 text-sm mb-2 text-center">
+                {loginError}
+              </p>
+            )}
 
             <button
               type="submit"
@@ -153,9 +150,12 @@ export function LoginPage() {
             </button>
           </form>
 
-          {/* Links */}
           <div className="mt-6 space-y-2 text-center">
-            <a href="#" className="block text-green-400 hover:text-green-600 text-sm">
+            <a
+              href="#"
+              onClick={(e) => e.preventDefault()}
+              className="block text-green-400 hover:text-green-600 text-sm"
+            >
               Esqueci minha senha
             </a>
             <Link to="/register" className="block text-green-400 hover:text-green-600 text-sm">

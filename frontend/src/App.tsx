@@ -16,11 +16,14 @@ import { ProfessorDashboardPage } from '@/pages/ProfessorDashboardPage'
 import { MyCoursesPage } from '@/pages/MyCoursesPage'
 import { CourseFormPage } from '@/pages/CourseFormPage'
 import { CourseEnrollmentsPage } from '@/pages/CourseEnrollmentsPage'
+import { Toaster } from 'react-hot-toast'
 
 function App() {
   const { user } = useAuthStore()
 
   return (
+    <>
+    <Toaster position="top-right" reverseOrder={false} />
     <Routes>
       {/* Rota da landing page */}
       <Route path="/" element={<LandingPage />} />
@@ -109,6 +112,7 @@ function App() {
         }
       />
     </Routes>
+    </>
   )
 }
 

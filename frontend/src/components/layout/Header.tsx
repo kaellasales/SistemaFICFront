@@ -1,14 +1,24 @@
 import { LogOut, Bell, User } from 'lucide-react'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuthStore } from '@/shared/stores/authStore'
 import { Button } from '@/components/ui/Button'
 import { Logo } from '@/components/ui/Logo'
+import { authService } from '@/shared/services/authService'
 
 export function Header() {
   const { user, logout } = useAuthStore()
+  const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
-  }
+  const handleLogout = async () => {
+    try {
+      await authService.logout() 
+    } catch (error) {
+      console.error('Erro ao deslogar:', error)
+    } finally {
+      logout() // Limpa Zustand store
+      navigate('/login') // Redireciona para a página de login
+    }
+}
 
   const getRoleLabel = (role: string) => {
     switch (role) {

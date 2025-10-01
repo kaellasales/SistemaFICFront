@@ -16,8 +16,8 @@ export function DashboardPage() {
 
   const getDashboardData = () => {
     // Mock data - em produção, viria da API
-    switch (user?.role) {
-      case 'candidate':
+    switch (user?.roles) {
+      case 'ALUNO':
         return {
           stats: [
             { label: 'Cursos Disponíveis', value: '12', icon: BookOpen, color: 'text-primary-600' },
@@ -31,7 +31,7 @@ export function DashboardPage() {
             { title: 'Certificado emitido para "Excel Avançado"', status: 'Completo', date: '2024-01-10' },
           ]
         }
-      case 'professor':
+      case 'PROFESSOR':
         return {
           stats: [
             { label: 'Meus Cursos', value: '5', icon: BookOpen, color: 'text-primary-600' },
@@ -45,7 +45,7 @@ export function DashboardPage() {
             { title: 'Curso "Excel Básico" finalizado', status: 'Completo', date: '2024-01-10' },
           ]
         }
-      case 'admin':
+      case 'CCA':
         return {
           stats: [
             { label: 'Total de Cursos', value: '28', icon: BookOpen, color: 'text-primary-600' },
@@ -98,7 +98,7 @@ export function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-secondary-900">
-          Bem-vindo, {user?.name}!
+          Bem-vindo, {user?.first_name}!
         </h1>
         <p className="text-secondary-600 mt-2">
           Aqui está um resumo das suas atividades no sistema.
@@ -169,7 +169,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {user?.role === 'candidate' && (
+              {user?.roles === 'ALUNO' && (
                 <>
                   <button className="w-full text-left p-3 rounded-lg border border-secondary-200 hover:bg-secondary-50 transition-colors">
                     <div className="flex items-center space-x-3">
@@ -192,7 +192,7 @@ export function DashboardPage() {
                 </>
               )}
               
-              {user?.role === 'professor' && (
+              {user?.roles === 'PROFESSOR' && (
                 <>
                   <button className="w-full text-left p-3 rounded-lg border border-secondary-200 hover:bg-secondary-50 transition-colors">
                     <div className="flex items-center space-x-3">
@@ -215,7 +215,7 @@ export function DashboardPage() {
                 </>
               )}
               
-              {user?.role === 'admin' && (
+              {user?.roles === 'admin' && (
                 <>
                   <button className="w-full text-left p-3 rounded-lg border border-secondary-200 hover:bg-secondary-50 transition-colors">
                     <div className="flex items-center space-x-3">

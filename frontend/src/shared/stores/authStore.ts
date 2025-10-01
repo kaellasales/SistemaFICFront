@@ -4,7 +4,8 @@ import { User } from '@/shared/types'
 
 interface AuthState {
   user: User | null
-  token: string | null
+  accessToken: string | null
+  refreshToken: string | null
   isAuthenticated: boolean
   isLoading: boolean
 }
@@ -28,25 +29,26 @@ export const useAuthStore = create<AuthStore>()(
       isLoading: false,
 
       // Ações
-      login: (user: User, token: string) => {
+    login: (user: User, accessToken: string, refreshToken: string) => {
         set({
           user,
-          token,
+          accessToken,
+          refreshToken,
           isAuthenticated: true,
           isLoading: false,
         })
-      },
+    },
 
-      logout: () => {
-        set({
-          user: null,
-          token: null,
-          isAuthenticated: false,
-          isLoading: false,
-        })
-      },
-
-      updateUser: (userData: Partial<User>) => {
+    logout: () => {
+      set({
+        user: null,
+        accessToken: null,
+        refreshToken: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
+    },
+    updateUser: (userData: Partial<User>) => {
         const currentUser = get().user
         if (currentUser) {
           set({
@@ -55,7 +57,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-      setLoading: (loading: boolean) => {
+    setLoading: (loading: boolean) => {
         set({ isLoading: loading })
       },
     }),
@@ -63,9 +65,10 @@ export const useAuthStore = create<AuthStore>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
-      }),
+      })
     }
   )
 )

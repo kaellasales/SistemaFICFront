@@ -58,7 +58,7 @@ export function LoginPage() {
       // 4. decide rota
       const from =
         location.state?.from?.pathname ||
-        (user.roles?.includes("PROFESSOR") ? "/professor-dashboard" : "/dashboard")
+        (user.groups?.includes("PROFESSOR") ? "/professor-dashboard" : "/dashboard")
 
       navigate(from, { replace: true })
 

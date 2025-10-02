@@ -1,3 +1,4 @@
+// src/shared/stores/authStore.ts
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User } from '@/shared/types'
@@ -11,7 +12,7 @@ interface AuthState {
 }
 
 interface AuthActions {
-  login: (user: User, token: string) => void
+  login: (user: User, accessToken: string, refreshToken: string) => void
   logout: () => void
   updateUser: (user: Partial<User>) => void
   setLoading: (loading: boolean) => void
@@ -24,12 +25,13 @@ export const useAuthStore = create<AuthStore>()(
     (set, get) => ({
       // Estado inicial
       user: null,
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
       // Ações
-    login: (user: User, accessToken: string, refreshToken: string) => {
+      login: (user: User, accessToken: string, refreshToken: string) => {
         set({
           user,
           accessToken,
@@ -37,18 +39,19 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: true,
           isLoading: false,
         })
-    },
+      },
 
-    logout: () => {
-      set({
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        isAuthenticated: false,
-        isLoading: false,
-      })
-    },
-    updateUser: (userData: Partial<User>) => {
+      logout: () => {
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
+      },
+
+      updateUser: (userData: Partial<User>) => {
         const currentUser = get().user
         if (currentUser) {
           set({
@@ -57,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
         }
       },
 
-    setLoading: (loading: boolean) => {
+      setLoading: (loading: boolean) => {
         set({ isLoading: loading })
       },
     }),
@@ -68,8 +71,7 @@ export const useAuthStore = create<AuthStore>()(
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
-      })
+      }),
     }
   )
 )
-

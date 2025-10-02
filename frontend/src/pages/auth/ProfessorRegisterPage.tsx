@@ -1,213 +1,197 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Logo } from '@/components/ui/Logo'
 import { authService } from '@/shared/services/authService'
+import toast from 'react-hot-toast'
 
+// Schema do Zod para validação do formulário
 const professorRegisterSchema = z.object({
-  name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  first_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  last_name: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
   email: z.string()
     .email('Email inválido')
     .refine((email) => email.endsWith('@ifce.edu.br'), {
       message: 'Email deve ser institucional (@ifce.edu.br)'
     }),
-  cpf: z.string().min(11, 'CPF deve ter 11 dígitos'),
-  phone: z.string().optional(),
+  cpf: z.string().min(11, 'CPF deve ter pelo menos 11 dígitos'),
+  siape: z.string().min(1, 'SIAPE é obrigatório'),
+  data_nascimento: z.string().optional(), // input type="date"
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Senhas não coincidem",
+  message: "As senhas não coincidem",
   path: ["confirmPassword"],
 })
 
 type ProfessorRegisterForm = z.infer<typeof professorRegisterSchema>
 
 export function ProfessorRegisterPage() {
+  const navigate = useNavigate()
   const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState('')
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ProfessorRegisterForm>({
+  const { register, handleSubmit, formState: { errors } } = useForm<ProfessorRegisterForm>({
     resolver: zodResolver(professorRegisterSchema),
   })
 
   const onSubmit = async (data: ProfessorRegisterForm) => {
     setIsLoading(true)
-    setError('')
-    
+
+    // Monta o payload aninhado conforme a API espera
+    const payload = {
+      user: {
+        first_name: data.first_name,
+        last_name: data.last_name,
+        email: data.email,
+        password: data.password,
+      },
+      siape: data.siape,
+      cpf: data.cpf,
+      data_nascimento: data.data_nascimento,
+    }
+
     try {
-      await authService.registerProfessor(data)
-      setSuccess(true)
+      await authService.registerProfessor(payload)
+      toast.success('Professor cadastrado com sucesso! Redirecionando...')
+      setTimeout(() => navigate('/dashboard'), 2000)
     } catch (error: any) {
-      setError(error.response?.data?.message || 'Erro ao cadastrar professor')
+      const errorData = error.response?.data
+      if (errorData) {
+        Object.values(errorData).forEach((messages: any) => {
+          if (Array.isArray(messages)) {
+            messages.forEach((message: string) => toast.error(message))
+          } else {
+            toast.error(String(messages))
+          }
+        })
+      } else {
+        toast.error('Ocorreu um erro desconhecido ao cadastrar o professor.')
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
-  if (success) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="border-2 border-green-800 rounded-lg p-8 bg-white text-center">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-green-800 mb-4">Cadastro Realizado!</h2>
-            <p className="text-gray-600 mb-6">
-              Seu cadastro como professor foi enviado para análise. 
-              Você receberá um email quando for aprovado.
-            </p>
-            <Link 
-              to="/login" 
-              className="bg-green-800 text-white py-2 px-4 rounded-md font-medium hover:bg-green-900 transition-colors"
-            >
-              Ir para Login
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-white flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Container principal com borda verde */}
         <div className="border-2 border-green-800 rounded-lg p-8 bg-white">
-          {/* Título */}
           <h1 className="text-2xl font-bold text-green-800 text-center mb-2">
             Cadastro de Professor
           </h1>
           <p className="text-sm text-gray-600 text-center mb-6">
-            Apenas professores do IFCE podem se cadastrar usando email institucional
+            Preencha os dados para criar um novo acesso de professor.
           </p>
 
-          {/* Logo */}
           <div className="flex justify-center mb-8">
             <div className="w-16 h-16 border-2 border-green-800 rounded-full flex items-center justify-center bg-white">
               <Logo size="md" />
             </div>
           </div>
 
-          {/* Mensagem de erro */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
-            </div>
-          )}
-
-          {/* Formulário */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Nome */}
-            <div>
-              <input
-                type="text"
-                placeholder="Nome completo"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('name')}
-              />
-              {errors.name && (
-                <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>
-              )}
+            {/* Nome e Sobrenome */}
+            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+              <div className="w-full sm:w-1/2">
+                <input
+                  type="text"
+                  placeholder="Nome"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  {...register('first_name')}
+                />
+                {errors.first_name && <p className="text-red-500 text-xs mt-1">{errors.first_name.message}</p>}
+              </div>
+              <div className="w-full sm:w-1/2">
+                <input
+                  type="text"
+                  placeholder="Sobrenome"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  {...register('last_name')}
+                />
+                {errors.last_name && <p className="text-red-500 text-xs mt-1">{errors.last_name.message}</p>}
+              </div>
             </div>
 
-            {/* Email Institucional */}
+            {/* Email */}
             <div>
               <input
                 type="email"
                 placeholder="Email institucional (@ifce.edu.br)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 {...register('email')}
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>
-              )}
+              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
             </div>
 
-            {/* CPF */}
+            {/* CPF e SIAPE */}
+            <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-4 sm:space-y-0">
+              <div className="w-full sm:w-1/2">
+                <input
+                  type="text"
+                  placeholder="CPF"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  {...register('cpf')}
+                />
+                {errors.cpf && <p className="text-red-500 text-xs mt-1">{errors.cpf.message}</p>}
+              </div>
+              <div className="w-full sm:w-1/2">
+                <input
+                  type="text"
+                  placeholder="SIAPE"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  {...register('siape')}
+                />
+                {errors.siape && <p className="text-red-500 text-xs mt-1">{errors.siape.message}</p>}
+              </div>
+            </div>
+
+            {/* Data de nascimento */}
             <div>
+              <label htmlFor="data_nascimento" className="text-sm text-gray-500 ml-1">Data de Nascimento (opcional)</label>
               <input
-                type="text"
-                placeholder="CPF (apenas números)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('cpf')}
+                id="data_nascimento"
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                {...register('data_nascimento')}
               />
-              {errors.cpf && (
-                <p className="text-red-500 text-xs mt-1">{errors.cpf.message}</p>
-              )}
+              {errors.data_nascimento && <p className="text-red-500 text-xs mt-1">{errors.data_nascimento.message}</p>}
             </div>
 
-            {/* Telefone */}
-            <div>
-              <input
-                type="tel"
-                placeholder="Telefone (opcional)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                {...register('phone')}
-              />
-              {errors.phone && (
-                <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
-              )}
-            </div>
-
-
-            {/* Senha */}
+            {/* Senha e confirmação */}
             <div>
               <input
                 type="password"
                 placeholder="Senha"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 {...register('password')}
               />
-              {errors.password && (
-                <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>
-              )}
+              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
             </div>
-
-            {/* Confirmar Senha */}
             <div>
               <input
                 type="password"
                 placeholder="Confirmar senha"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                 {...register('confirmPassword')}
               />
-              {errors.confirmPassword && (
-                <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>
-              )}
+              {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword.message}</p>}
             </div>
 
-            {/* Botão de confirmação */}
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-800 text-white py-2 px-4 rounded-md font-medium hover:bg-green-900 transition-colors disabled:opacity-50"
+              className="w-full bg-green-800 text-white py-3 px-4 rounded-md font-medium hover:bg-green-900 transition-colors disabled:opacity-50"
             >
-              {isLoading ? 'Cadastrando...' : 'Cadastrar como Professor'}
+              {isLoading ? 'Cadastrando...' : 'Cadastrar Professor'}
             </button>
           </form>
 
-          {/* Links */}
-          <div className="mt-6 space-y-2 text-center">
+          <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
-              Já tem uma conta?{' '}
-              <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
-                Entre aqui
-              </Link>
-            </p>
-            <p className="text-sm text-gray-600">
-              É candidato?{' '}
-              <Link to="/register" className="text-green-600 hover:text-green-700 font-medium">
-                Cadastre-se aqui
+              <Link to="/dashboard" className="text-green-600 hover:text-green-700 font-medium">
+                Voltar para a Dashboard
               </Link>
             </p>
           </div>

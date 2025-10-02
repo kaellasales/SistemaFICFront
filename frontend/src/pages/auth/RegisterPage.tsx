@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Logo } from '@/components/ui/Logo'
-import api from '@/shared/services/api'
+import { authService } from '@/shared/services/authService'
 import toast from 'react-hot-toast'
 
 const registerSchema = z
@@ -53,13 +53,15 @@ export function RegisterPage() {
     setError('')
     setEmailError('')
 
-    try {
-      await api.post('/registro/aluno/', {
+    const payload = {
         first_name: data.first_name,
         last_name: data.last_name,
         email: data.email,
         password: data.password,
-      })
+    }
+
+    try {
+      await authService.registerAluno(payload)
       toast.success('Cadastro realizado com sucesso!')
       reset()
       setTimeout(() => navigate('/login'), 2000)

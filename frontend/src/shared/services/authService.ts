@@ -1,6 +1,8 @@
 import api from './api'
 import { User, UserRole, RegisterForm } from '@/shared/types'
 import { useAuthStore } from '../stores/authStore'
+import { console } from 'inspector'
+
 export interface AdminRegisterForm {
   name: string
   email: string
@@ -11,51 +13,38 @@ export interface AdminRegisterForm {
   adminCode: string // Código especial para criar admin
 }
 
-export interface ProfessorRegisterForm {
-  name: string
-  email: string
-  cpf: string
-  phone?: string
-  password: string
-  confirmPassword: string
-  adminApproval?: boolean // Se precisa de aprovação de admin
+export interface ProfessorPayload { //EM UTILIZAÇÃO
+  user:{
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+  };
+  cpf: string;
+  siape: string;
+  data_nascimento: string | null;
 }
 
-export interface CandidateRegisterForm {
-  name: string
-  email: string
-  cpf: string
-  phone?: string
-  password: string
-  confirmPassword: string
-  isIFCEStudent: boolean
+export interface AlunoRegisterForm { //EM UTILIZAÇÃO
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
 }
 
 class AuthService {
-  // Cadastro de candidatos (público)
-  async registerCandidate(data: CandidateRegisterForm) {
-    const response = await api.post('/auth/register/candidate', {
-      ...data,
-      role: 'candidate'
-    })
-    return response.data
+  async registerAluno(data: AlunoRegisterForm) { //EM UTILIZAÇÃO
+    const response = await api.post('/registro/aluno/', data);
+    return response.data;
   }
 
-  // Cadastro de professores (pode ser público ou requer aprovação)
-  async registerProfessor(data: ProfessorRegisterForm) {
-    // Validação adicional: verificar se o email institucional é válido
-    if (!data.email.endsWith('@ifce.edu.br')) {
-      throw new Error('Email deve ser institucional do IFCE (@ifce.edu.br)')
-    }
-    
-    const response = await api.post('/auth/register/professor', {
-      ...data,
-      role: 'professor'
-    })
-    return response.data
+  async registerProfessor(data: ProfessorPayload) { //EM UTILIZAÇÃO
+    const response = await api.post('/professor/', data);
+    return response.data;
   }
 
-  // Cadastro de administradores (apenas por outros admins)
+
+  // Cadastro de administradores (apenas por outros admins)(NAO ESTAMOS UTILIZANDO)
   async registerAdmin(data: AdminRegisterForm, adminToken: string) {
     const response = await api.post('/auth/register/admin', {
       ...data,

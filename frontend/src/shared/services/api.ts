@@ -13,7 +13,7 @@ const api = axios.create({
 // Interceptor de requisição: adiciona token se existir
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token
+    const token = useAuthStore.getState().accessToken
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }

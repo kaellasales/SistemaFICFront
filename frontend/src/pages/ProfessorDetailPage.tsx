@@ -38,8 +38,9 @@ export function ProfessorDetailPage() {
         setLoading(false)
       }
     }
-
-    fetchProfessor()
+    if (id) {
+    fetchProfessor();
+    }
   }, [id])
 
   const getStatusIcon = (status: string) => {

@@ -66,7 +66,7 @@ export function ProfessoresPage() {
               onClick={() => navigate(`/professores/${prof.id}`)}
             >
               <CardHeader>
-                <CardTitle>{prof.first_name} {prof.last_name}</CardTitle>
+                <CardTitle>{prof.user.first_name} {prof.user.last_name}</CardTitle>
                 <CardDescription>{prof.email}</CardDescription>
               </CardHeader>
               <CardContent className="flex items-center space-x-2">

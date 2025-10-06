@@ -43,6 +43,7 @@ class AuthService {
     return response.data;
   }
 
+    
 
   // Cadastro de administradores (apenas por outros admins)(NAO ESTAMOS UTILIZANDO)
   async registerAdmin(data: AdminRegisterForm, adminToken: string) {

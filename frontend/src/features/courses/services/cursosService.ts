@@ -1,7 +1,6 @@
-import api from './api';
-import { CourseFormData } from '@/pages/CourseFormPage'; // Reutilize a interface
+import api from '../../../shared/services/api';
 
-// Interface para o payload que será enviado para a API (com snake_case)
+// Esta interface define os dados que o Mestre de Obras envia para o Django
 interface CourseApiPayload {
   nome: string;
   descricao: string;
@@ -14,22 +13,23 @@ interface CourseApiPayload {
   data_inicio_curso: string;
   data_fim_curso: string;
   requisitos: string;
-  status: 'RASCUNHO' | 'PUBLICADO';
 }
 
+// Função para criar um novo curso
 const create = (data: CourseApiPayload) => {
   return api.post('/cursos/', data);
 };
 
+// Função para atualizar um curso existente
 const update = (id: string, data: CourseApiPayload) => {
   return api.put(`/cursos/${id}/`, data);
 };
 
+// Função para buscar os dados de um curso (para a página de edição)
 const getById = (id: string) => {
   return api.get(`/cursos/${id}/`);
 };
 
-// Exporte todas as funções para que a Store possa usá-las
 export const cursoService = {
   create,
   update,

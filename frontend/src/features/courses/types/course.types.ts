@@ -32,3 +32,35 @@ export const initialCourseFormData: CourseFormData = {
   requisitos: '',
 };
 
+interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface Professor {
+  id: number;
+  user: User;
+  siape: string;
+}
+
+// A interface para um objeto de CURSO, como ele deve ser usado no React
+export interface Course {
+  id: number;
+  nome: string;
+  descricao: string;
+  descricaoCurta: string;
+  requisitos: string;
+  cargaHoraria: number;
+  vagasInternas: number;
+  vagasExternas: number;
+  dataInicioInscricoes: string;
+  dataFimInscricoes: string;
+  dataInicioCurso: string;
+  dataFimCurso: string;
+  status: string;
+  criador: Professor;
+}
+
+

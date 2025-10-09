@@ -9,15 +9,14 @@ export function Header() {
   const { user, logout } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleLogout = async () => {
-    try {
-      await authService.logout() 
-    } catch (error) {
-      console.error('Erro ao deslogar:', error)
-    } finally {
-      logout() // Limpa Zustand store
-      navigate('/login') // Redireciona para a página de login
-    }
+const handleLogout = async () => {
+  try {
+    await authService.logout()
+  } catch (error) {
+    console.error('Erro ao deslogar:', error)
+  } finally {
+    navigate('/login')
+  }
 }
 
   return (

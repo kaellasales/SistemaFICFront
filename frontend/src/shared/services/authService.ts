@@ -10,10 +10,19 @@ export interface AdminRegisterForm {
   phone?: string
   password: string
   confirmPassword: string
-  adminCode: string // Código especial para criar admin
+  adminCode: string 
 }
 
-export interface ProfessorPayload { //EM UTILIZAÇÃO
+export interface AlunoPayload {
+  user: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+  };
+}
+
+export interface ProfessorPayload {
   user:{
     first_name: string;
     last_name: string;
@@ -25,15 +34,8 @@ export interface ProfessorPayload { //EM UTILIZAÇÃO
   data_nascimento: string | null;
 }
 
-export interface AlunoRegisterForm { //EM UTILIZAÇÃO
-    first_name: string;
-    last_name: string;
-    email: string;
-    password: string;
-}
-
 class AuthService {
-  async registerAluno(data: AlunoRegisterForm) { //EM UTILIZAÇÃO
+  async registerAluno(data: AlunoPayload) { //EM UTILIZAÇÃO
     const response = await api.post('/registro/aluno/', data);
     return response.data;
   }
@@ -59,37 +61,58 @@ class AuthService {
   }
 
 
-  async login(email: string, password: string) {
-    const response = await api.post('/token/', { email, password })
-    const { access_token, refresh_token } = response.data
-
-    // obter dados do usuário logado
-    const user = await this.me()
-
-    // atualizar o Zustand store
-    useAuthStore.getState().login(user, access_token, refresh_token)
-
-      return { user, access_token, refresh_token }
-    }
-
-  async logout() {
-    const refreshToken = localStorage.getItem('refresh_token')
-    if (!refreshToken) return
-
-    try {
-      await api.post('/logout/', { refresh: refreshToken }, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('access_token')}`
-        }
-      })
-    } catch {
-      // mesmo que falhe, removemos tokens
-    } finally {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('refresh_token')
-      useAuthStore.getState().logout() // limpa Zustand store
-    }
+async me() {
+    // Esta rota no seu backend deve ser protegida e retornar 
+    // os dados do usuário autenticado (com base no token).
+    const response = await api.get('/me/');
+    return response.data;
   }
+
+async login(email: string, password: string) {
+  const response = await api.post('/token/', { email, password });
+  const { access, refresh } = response.data;
+
+  useAuthStore.getState().setTokens(access, refresh);
+
+  // Atualiza o header manualmente antes de chamar `me()`
+  api.defaults.headers.Authorization = `Bearer ${access}`;
+
+  const user = await this.me();
+
+  useAuthStore.getState().setUser(user);
+  
+  return { user, access, refresh };
+}
+
+async logout() {
+  const refreshToken = localStorage.getItem('refresh_token')
+  if (!refreshToken) {
+    // Importante: também limpar headers mesmo sem refreshToken
+    delete api.defaults.headers.Authorization
+    useAuthStore.getState().logout()
+    return
+  }
+
+  try {
+    await api.post('/logout/', { refresh: refreshToken }, {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('access_token')}`
+      }
+    })
+  } catch {
+    // mesmo que falhe, limpamos tudo
+  } finally {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+
+    // Aqui está o truque
+    delete api.defaults.headers.Authorization
+
+    // E limpa o Zustand + persist imediatamente
+    useAuthStore.getState().logout()
+    localStorage.removeItem('auth-storage')
+  }
+}
 
 
   // Verificar se email já existe

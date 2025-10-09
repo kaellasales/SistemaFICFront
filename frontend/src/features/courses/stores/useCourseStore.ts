@@ -1,52 +1,40 @@
 import { create } from 'zustand';
 import { cursoService } from '@/features/courses/services/cursosService';
-import { CourseFormData } from '@/hooks/useCourseForm'; 
-
-
-const initialFormData: CourseFormData = {
-  nome: '',
-  descricao: '',
-  descricaoCurta: '',
-  cargaHoraria: 0,
-  vagasInternas: 0,
-  vagasExternas: 0,
-  dataInicioInscricoes: '',
-  dataFimInscricoes: '',
-  dataInicioCurso: '',
-  dataFimCurso: '',
-  requisitos: '',
-};
+import { fromSnakeCase } from '@/shared/utils/caseConverter';
+import { Course } from '@/features/courses/types/course.types';
 
 interface CourseState {
-  // O estado que guarda o formulário atual
-  formData: CourseFormData;
-
-  // Uma ação para iniciar ou limpar o formulário
-  initializeForm: () => void;
-
-  // Suas ações existentes
+  courses: Course[];
+  fetchCourses: () => Promise<void>;
   createCourse: (payload: any) => Promise<any>;
   updateCourse: (id: string, payload: any) => Promise<any>;
   fetchCourse: (id: string) => Promise<any>;
 }
 
 export const useCourseStore = create<CourseState>((set) => ({
-  formData: initialFormData,
+  courses: [],
 
-  initializeForm: () => {
-    // Ação para resetar o formulário para o estado inicial
-    set({ formData: initialFormData });
+  fetchCourses: async () => {
+    try {
+      const response = await cursoService.list();
+      const formattedCourses: Course[] = fromSnakeCase(response.data);
+      set({ courses: formattedCourses });
+    } catch (error) {
+      console.error("Erro ao buscar cursos na store:", error);
+      throw error;
+    }
   },
-  
-  // Suas outras ações (create, update, fetch) continuam iguais...
-  createCourse: async (payload) => {
+
+  createCourse: (payload) => {
     return cursoService.create(payload);
   },
-  updateCourse: async (id, payload) => {
+
+  updateCourse: (id, payload) => {
     return cursoService.update(id, payload);
   },
-  fetchCourse: async (id) => {
-    const response = await cursoService.getById(id);
-    return response.data;
+
+  fetchCourse: (id) => {
+    // A conversão de snake_case será feita no hook que consome isso
+    return cursoService.getById(id).then(res => res.data);
   },
 }));

@@ -15,23 +15,30 @@ interface CourseApiPayload {
   requisitos: string;
 }
 
-// Função para criar um novo curso
-const create = (data: CourseApiPayload) => {
-  return api.post('/cursos/', data);
+const list = () => {
+  return api.get('/cursos/');
 };
 
-// Função para atualizar um curso existente
-const update = (id: string, data: CourseApiPayload) => {
-  return api.put(`/cursos/${id}/`, data);
-};
-
-// Função para buscar os dados de um curso (para a página de edição)
 const getById = (id: string) => {
   return api.get(`/cursos/${id}/`);
 };
 
+const create = (data: any) => {
+  return api.post('\/cursos/', data);
+};
+
+const update = (id: string, data: any) => {
+  return api.put(`cursos/${id}/`, data);
+};
+
+const destroy = (id: string) => {
+  return api.delete(`/cursos/${id}/`);
+}
+
 export const cursoService = {
+  list,
+  getById,
   create,
   update,
-  getById,
+  destroy,
 };

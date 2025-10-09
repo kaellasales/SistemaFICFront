@@ -23,65 +23,61 @@ const navItems: NavItem[] = [
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['candidate', 'admin'],
-  },
-  {
-    label: 'Dashboard',
-    href: '/professor-dashboard',
-    icon: LayoutDashboard,
-    roles: ['professor'],
+    roles: ['aluno', 'professor', 'cca'], // Todos veem uma dashboard
   },
   {
     label: 'Cursos',
     href: '/courses',
     icon: BookOpen,
-    roles: ['candidate', 'admin'],
+    roles: ['aluno'], // Apenas alunos veem a "vitrine" de cursos
   },
   {
     label: 'Meus Cursos',
     href: '/my-courses',
     icon: BookOpen,
-    roles: ['professor'],
+    roles: ['professor'], // Apenas professores veem os cursos que eles criaram
   },
   {
-    label: 'Inscrições',
+    label: 'Minhas Inscrições',
     href: '/enrollments',
     icon: FileText,
-    roles: ['candidate', 'admin'],
+    roles: ['aluno'],
   },
   {
     label: 'Certificados',
     href: '/certificates',
     icon: Award,
-    roles: ['candidate', 'admin'],
+    roles: ['aluno', 'cca'],
   },
   {
     label: 'Relatórios',
     href: '/reports',
     icon: BarChart3,
-    roles: ['professor', 'admin'],
+    roles: ['professor', 'cca'],
   },
   {
-    label: 'Usuários',
+    label: 'Gerenciar Usuários',
     href: '/users',
     icon: Users,
-    roles: ['admin'],
+    roles: ['cca'], // Apenas o CCA gerencia usuários
   },
   {
     label: 'Configurações',
     href: '/settings',
     icon: Settings,
-    roles: ['candidate', 'professor', 'admin'],
+    roles: ['aluno', 'professor', 'cca'],
   },
-]
+];
+
 
 export function Sidebar() {
   const { user } = useAuthStore()
 
-  const filteredNavItems = navItems.filter(item => 
-    item.roles.includes(user?.role || '')
-  )
-
+const filteredNavItems = navItems.filter(item => {
+  if (!user?.groups) return false;
+  const userGroups = user.groups.map(group => group.toLowerCase());
+  return item.roles.some(role => userGroups.includes(role));
+});
   return (
     <aside className="w-64 bg-white border-r border-secondary-200 min-h-screen">
       <nav className="p-4 space-y-2">

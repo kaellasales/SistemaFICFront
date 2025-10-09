@@ -1,37 +1,36 @@
 // Tipos de usuário
-export type UserRole = 'candidate' | 'professor' | 'admin'
+export type UserGroup = 'ALUNO' | 'PROFESSOR' | 'CCA';
 
 export interface User {
-  id: string
-  name: string
-  email: string
-  cpf: string
-  phone?: string
-  role: UserRole
-  createdAt: string
-  updatedAt: string
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  groups: UserGroup[]; // Um array de strings, ex: ["ALUNO"]
+}
+
+export interface Professor {
+  id: number;
+  user: User; 
+  siape: string;
+  cpf: string;
+  data_nascimento: string;
 }
 
 // Tipos de curso
 export interface Course {
-  id: string
-  name: string
-  description: string
-  shortDescription: string
-  workload: number
-  maxSlots: number
-  availableSlots: number
-  enrollmentStartDate: string
-  enrollmentEndDate: string
-  courseStartDate: string
-  courseEndDate: string
-  professorId: string
-  professor: User
-  status: 'draft' | 'published' | 'cancelled' | 'completed'
-  requirements: string[]
-  content: string
-  createdAt: string
-  updatedAt: string
+  id: number;
+  nome: string;
+  descricao: string;
+  carga_horaria: number;
+  vagas_internas: number;
+  vagas_externas: number;
+  data_inicio_inscricoes: string;
+  data_fim_inscricoes: string;
+  data_inicio_curso: string;
+  data_fim_curso: string;
+  status: string;
+  criador: Professor; // Um curso é criado por um Professor
 }
 
 // Tipos de inscrição

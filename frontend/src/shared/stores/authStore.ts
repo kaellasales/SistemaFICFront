@@ -1,7 +1,8 @@
 // src/shared/stores/authStore.ts
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { User } from '@/shared/types'
+import { authService } from '@/shared/services/authService';
 
 interface AuthState {
   user: User | null
@@ -16,6 +17,7 @@ interface AuthActions {
   logout: () => void
   updateUser: (user: Partial<User>) => void
   setLoading: (loading: boolean) => void
+  refreshUser: () => Promise<void>
 }
 
 type AuthStore = AuthState & AuthActions
@@ -23,15 +25,13 @@ type AuthStore = AuthState & AuthActions
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
-      // Estado inicial
       user: null,
       accessToken: null,
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
 
-      // Ações
-      login: (user: User, accessToken: string, refreshToken: string) => {
+      login: (user, accessToken, refreshToken) => {
         set({
           user,
           accessToken,
@@ -42,6 +42,7 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: () => {
+        // Limpa o estado do store
         set({
           user: null,
           accessToken: null,
@@ -49,23 +50,38 @@ export const useAuthStore = create<AuthStore>()(
           isAuthenticated: false,
           isLoading: false,
         })
+
+        localStorage.removeItem('auth-storage')
       },
 
-      updateUser: (userData: Partial<User>) => {
+      updateUser: (userData) => {
         const currentUser = get().user
         if (currentUser) {
-          set({
-            user: { ...currentUser, ...userData },
-          })
+          set({ user: { ...currentUser, ...userData } })
         }
       },
 
-      setLoading: (loading: boolean) => {
-        set({ isLoading: loading })
+      setLoading: (loading) => set({ isLoading: loading }),
+
+     
+    refreshUser: async () => {
+      try {
+        // 1. Comanda o 'Service' para buscar os dados do usuário
+        const updatedUser = await authService.me();
+        
+        // 2. Atualiza o estado da store com os novos dados
+        set({ user: updatedUser });
+        
+      } catch (err) {
+        console.error('Erro ao atualizar usuário:', err);
+        // Se a busca falhar (ex: token inválido), desloga o usuário
+        get().logout();
+        }
       },
     }),
     {
       name: 'auth-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,

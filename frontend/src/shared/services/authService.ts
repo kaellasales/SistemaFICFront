@@ -1,5 +1,4 @@
 import api from './api'
-import { User, UserRole, RegisterForm } from '@/shared/types'
 import { useAuthStore } from '../stores/authStore'
 import { console } from 'inspector'
 
@@ -45,49 +44,31 @@ class AuthService {
     return response.data;
   }
 
-    
-
-  // Cadastro de administradores (apenas por outros admins)(NAO ESTAMOS UTILIZANDO)
-  async registerAdmin(data: AdminRegisterForm, adminToken: string) {
-    const response = await api.post('/auth/register/admin', {
-      ...data,
-      role: 'admin'
-    }, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      }
-    })
-    return response.data
-  }
-
 
 async me() {
-    // Esta rota no seu backend deve ser protegida e retornar 
-    // os dados do usuário autenticado (com base no token).
     const response = await api.get('/me/');
     return response.data;
   }
 
-async login(email: string, password: string) {
-  const response = await api.post('/token/', { email, password });
-  const { access, refresh } = response.data;
+  async login(email: string, password: string) {
+    const response = await api.post('/token/', { email, password });
+    const { access, refresh } = response.data;
+    
+    // A store é quem guarda o token. O interceptor vai ler daqui.
+    useAuthStore.getState().setTokens(access, refresh);
 
-  useAuthStore.getState().setTokens(access, refresh);
-
-  // Atualiza o header manualmente antes de chamar `me()`
-  api.defaults.headers.Authorization = `Bearer ${access}`;
-
-  const user = await this.me();
-
-  useAuthStore.getState().setUser(user);
+    // Agora que o token está na store, a chamada 'me()' vai ser autenticada pelo interceptor.
+    const user = await this.me();
+    
+    // Atualiza a store com todos os dados.
+    useAuthStore.getState().setUser(user);
+    
+    return { user, access, refresh };
+  }
   
-  return { user, access, refresh };
-}
-
 async logout() {
   const refreshToken = localStorage.getItem('refresh_token')
   if (!refreshToken) {
-    // Importante: também limpar headers mesmo sem refreshToken
     delete api.defaults.headers.Authorization
     useAuthStore.getState().logout()
     return
@@ -100,95 +81,16 @@ async logout() {
       }
     })
   } catch {
-    // mesmo que falhe, limpamos tudo
   } finally {
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
 
-    // Aqui está o truque
     delete api.defaults.headers.Authorization
 
-    // E limpa o Zustand + persist imediatamente
     useAuthStore.getState().logout()
     localStorage.removeItem('auth-storage')
   }
 }
-
-
-  // Verificar se email já existe
-  async checkEmailExists(email: string) {
-    const response = await api.get(`/auth/check-email/${email}`)
-    return response.data
-  }
-
-  // Verificar se CPF já existe
-  async checkCpfExists(cpf: string) {
-    const response = await api.get(`/auth/check-cpf/${cpf}`)
-    return response.data
-  }
-
-  // Solicitar aprovação de professor (se necessário)
-  async requestProfessorApproval(professorId: string) {
-    const response = await api.post(`/auth/request-professor-approval/${professorId}`)
-    return response.data
-  }
-
-  // Aprovar professor (apenas admins)
-  async approveProfessor(professorId: string, adminToken: string) {
-    const response = await api.post(`/auth/approve-professor/${professorId}`, {}, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      }
-    })
-    return response.data
-  }
-
-  // Listar professores pendentes (apenas admins)
-  async getPendingProfessors(adminToken: string) {
-    const response = await api.get('/auth/pending-professors', {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      }
-    })
-    return response.data
-  }
-
-  // Listar todos os usuários (apenas admins)
-  async getAllUsers(adminToken: string, filters?: {
-    role?: UserRole
-    status?: 'active' | 'pending' | 'inactive'
-    search?: string
-  }) {
-    const response = await api.get('/auth/users', {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      },
-      params: filters
-    })
-    return response.data
-  }
-
-  // Atualizar role de usuário (apenas admins)
-  async updateUserRole(userId: string, newRole: UserRole, adminToken: string) {
-    const response = await api.patch(`/auth/users/${userId}/role`, {
-      role: newRole
-    }, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      }
-    })
-    return response.data
-  }
-
-  // Desativar/ativar usuário (apenas admins)
-  async toggleUserStatus(userId: string, adminToken: string) {
-    const response = await api.patch(`/auth/users/${userId}/toggle-status`, {}, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`
-      }
-    })
-    return response.data
-  }
 
 }
 

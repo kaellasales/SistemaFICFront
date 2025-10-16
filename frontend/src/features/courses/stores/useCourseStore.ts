@@ -5,14 +5,23 @@ import { Course } from '@/features/courses/types/course.types';
 
 interface CourseState {
   courses: Course[];
+  selectedCourse: Course | null; 
   fetchCourses: () => Promise<void>;
   createCourse: (payload: any) => Promise<any>;
   updateCourse: (id: string, payload: any) => Promise<any>;
-  fetchCourse: (id: string) => Promise<any>;
+  fetchCourseById: (id: string) => Promise<void>; 
+  clearCourses: () => void;
+  updateCourse: (id: string, data: any) => Promise<any>;
+  deleteCourse: (id: number) => Promise<void>; 
 }
 
 export const useCourseStore = create<CourseState>((set) => ({
   courses: [],
+  selectedCourse: null, // <<< INICIALIZA O COMPARTIMENTO COMO VAZIO
+
+  clearCourses: () => {
+    set({ courses: [], selectedCourse: null }); // Limpa tudo
+  },
 
   fetchCourses: async () => {
     try {
@@ -29,12 +38,27 @@ export const useCourseStore = create<CourseState>((set) => ({
     return cursoService.create(payload);
   },
 
-  updateCourse: (id, payload) => {
-    return cursoService.update(id, payload);
+  updateCourse: (id, data) => {
+    return cursoService.update(id, data);
   },
 
-  fetchCourse: (id) => {
-    // A conversão de snake_case será feita no hook que consome isso
-    return cursoService.getById(id).then(res => res.data);
+  fetchCourseById: async (id: string) => {
+    try {
+      const response = await cursoService.getById(id);
+      const course = fromSnakeCase(response.data);
+      set({ selectedCourse: course });
+      return course;
+    } catch (error) {
+      console.error(`Falha ao buscar curso com id ${id}.`, error);
+      set({ selectedCourse: null });
+      throw error;
+    }
+  },
+  deleteCourse: async (id) => {
+    await cursoService.deleteCourse(id);
+    // Remove o curso da lista na memória para a UI atualizar na hora
+    set((state) => ({
+      courses: state.courses.filter((course) => course.id !== id),
+    }));
   },
 }));

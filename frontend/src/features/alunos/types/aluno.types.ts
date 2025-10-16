@@ -1,3 +1,30 @@
+
+interface User {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  groups: string[];
+}
+
+export interface Aluno {
+  id: number;
+  user: User; // O objeto de usuário aninhado
+  dataNascimento: string | null;
+  sexo: string;
+  cpf: string | null;
+  numeroIdentidade: string;
+  orgaoExpedidor: string;
+  ufExpedidor: number | string | null;
+  naturalidade: number | string | null;
+  cep: string;
+  logradouro: string;
+  numeroEndereco: string;
+  bairro: string;
+  cidade: number | string | null;
+  telefoneCelular: string;
+}
+
 export interface AlunoFormData {
   dataNascimento: string;
   sexo: string;

@@ -1,619 +1,161 @@
-import { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { Logo } from '@/components/ui/Logo'
-import { FileUpload } from '@/components/ui/FileUpload'
-import { ValidatedInput } from '@/components/ui/ValidatedInput'
-import { ValidatedSelect } from '@/components/ui/ValidatedSelect'
-import { enrollmentService, type EnrollmentData } from '@/shared/services/enrollmentService'
-import { useValidation } from '@/shared/hooks/useValidation'
-
-interface Course {
-  id: string
-  name: string
-  enrollmentEndDate: string
-  status: string
-  description: string
-  startDate: string
-  endDate: string
-  vacancies: number
-  schedule: string
-  classTime: string
-  requirements: string
-}
-
-interface StudentData {
-  // Dados pessoais
-  nome: string
-  sobrenome: string
-  dataNascimento: string
-  sexo: string
-  cpf: string
-  identidade: string
-  orgaoExpedidor: string
-  naturalidade: string
-  
-  // Dados de contato
-  email: string
-  telefoneCelular: string
-  telefoneResidencial: string
-  telefoneComercial: string
-  
-  // Dados de endereço
-  endereco: string
-  numero: string
-  complemento: string
-  bairro: string
-  cidade: string
-  cep: string
-  
-  // Dados acadêmicos
-  profissao: string
-  numeroMatricula: string
-  numeroInscricao: string
-}
+import { useNavigate } from 'react-router-dom';
+import { useEnrollmentForm } from '@/features/enrollments/hooks/useEnrollmentForm';
+import { Button } from '@/components/ui/Button';
+import { ValidatedInput } from '@/components/ui/ValidatedInput';
+import { FileUpload } from '@/components/ui/FileUpload';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/Card';
 
 export function EnrollmentPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const course = location.state?.course as Course
-  
-  const [currentStep, setCurrentStep] = useState(1)
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { validateCurrentStep, getFieldError, clearErrors } = useValidation()
-  const [studentData, setStudentData] = useState<StudentData>({
-    nome: '',
-    sobrenome: '',
-    dataNascimento: '',
-    sexo: '',
-    cpf: '',
-    identidade: '',
-    orgaoExpedidor: '',
-    naturalidade: '',
-    email: '',
-    telefoneCelular: '',
-    telefoneResidencial: '',
-    telefoneComercial: '',
-    endereco: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: '',
-    cep: '',
-    profissao: '',
-    numeroMatricula: '',
-    numeroInscricao: ''
-  })
-
-  const totalSteps = 5
-
-  const handleInputChange = (field: keyof StudentData, value: string) => {
-    setStudentData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const nextStep = () => {
-    // Validar etapa atual antes de avançar
-    const isValid = validateCurrentStep(currentStep, studentData, uploadedFiles)
-    
-    if (isValid && currentStep < totalSteps) {
-      clearErrors()
-      setCurrentStep(currentStep + 1)
-    }
-  }
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
-    }
-  }
-
-  const handleSubmit = async () => {
-    if (!course) return
-    
-    setIsSubmitting(true)
-    
-    try {
-      // Converter dados para o formato da API
-      const enrollmentData: EnrollmentData = {
-        nome: studentData.nome,
-        sobrenome: studentData.sobrenome,
-        dataNascimento: studentData.dataNascimento,
-        sexo: studentData.sexo,
-        cpf: studentData.cpf,
-        identidade: studentData.identidade,
-        orgaoExpedidor: studentData.orgaoExpedidor,
-        naturalidade: studentData.naturalidade,
-        email: studentData.email,
-        telefoneCelular: studentData.telefoneCelular,
-        telefoneResidencial: studentData.telefoneResidencial,
-        telefoneComercial: studentData.telefoneComercial,
-        endereco: studentData.endereco,
-        numero: studentData.numero,
-        complemento: studentData.complemento,
-        bairro: studentData.bairro,
-        cidade: studentData.cidade,
-        cep: studentData.cep,
-        profissao: studentData.profissao,
-        numeroMatricula: studentData.numeroMatricula
-      }
-      
-      // Enviar dados para a API
-      await enrollmentService.createEnrollment(course.id, enrollmentData, uploadedFiles)
-      
-      alert('Inscrição realizada com sucesso!')
-      navigate('/my-enrollments')
-    } catch (error) {
-      console.error('Erro ao realizar inscrição:', error)
-      alert('Erro ao realizar inscrição. Tente novamente.')
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
+  const {
+    course, currentStep, totalSteps, formData, loading, isSubmitting,
+    uploadedFiles, setUploadedFiles, // Ela já pedia isso!
+    handleInputChange, nextStep, prevStep, handleSubmit
+  } = useEnrollmentForm();
 
   const renderStepContent = () => {
+    if (loading) {
+      return (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando seus dados...</p>
+        </div>
+      );
+    }
+    
     switch (currentStep) {
+      // --- PASSO 1: TODOS OS DADOS E TIPO DE VAGA ---
       case 1:
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ValidatedInput
-                label="Nome"
-                required
-                value={studentData.nome}
-                onChange={(e) => handleInputChange('nome', e.target.value)}
-                placeholder="Digite seu nome"
-                error={getFieldError('nome')}
-              />
-              
-              <ValidatedInput
-                label="Sobrenome"
-                required
-                value={studentData.sobrenome}
-                onChange={(e) => handleInputChange('sobrenome', e.target.value)}
-                placeholder="Digite seu sobrenome"
-                error={getFieldError('sobrenome')}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <ValidatedInput
-                label="Data de nascimento"
-                required
-                type="date"
-                value={studentData.dataNascimento}
-                onChange={(e) => handleInputChange('dataNascimento', e.target.value)}
-                error={getFieldError('dataNascimento')}
-              />
-              <ValidatedSelect
-                label="Sexo"
-                required
-                value={studentData.sexo}
-                onChange={(e) => handleInputChange('sexo', e.target.value)}
-                placeholder="Selecione"
-                error={getFieldError('sexo')}
-                options={[
-                  { value: 'masculino', label: 'Masculino' },
-                  { value: 'feminino', label: 'Feminino' },
-                  { value: 'outro', label: 'Outro' }
-                ]}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Identidade *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.identidade}
-                  onChange={(e) => handleInputChange('identidade', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Órgão expedidor *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.orgaoExpedidor}
-                  onChange={(e) => handleInputChange('orgaoExpedidor', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-            </div>
-            
+          <div className="space-y-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CPF *
-              </label>
-              <input
-                type="text"
-                value={studentData.cpf}
-                onChange={(e) => handleInputChange('cpf', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                placeholder="000.000.000-00"
-                required
+              <h3 className="text-xl font-semibold text-green-800">Confirme seus Dados</h3>
+              <p className="text-gray-600 mt-1">Seus dados de perfil foram preenchidos automaticamente. Se precisar alterar, vá para a página de perfil.</p>
+              
+              <div className="mt-4 space-y-4 p-4 border rounded-md bg-gray-50">
+                <h4 className="font-semibold text-gray-700">Dados Pessoais</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ValidatedInput label="Nome" value={`${formData.user?.firstName || ''} ${formData.user?.lastName || ''}`} readOnly />
+                    <ValidatedInput label="CPF" value={formData.cpf || ''} readOnly />
+                    <ValidatedInput label="Email" value={formData.user?.email || ''} readOnly />
+                    <ValidatedInput label="Celular" value={formData.telefoneCelular || ''} readOnly />
+                </div>
+                <h4 className="font-semibold text-gray-700 pt-4 border-t">Endereço</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ValidatedInput label="Logradouro" value={`${formData.logradouro || ''}, ${formData.numeroEndereco || 'S/N'}`} readOnly />
+                    <ValidatedInput label="Bairro" value={formData.bairro || ''} readOnly />
+                    <ValidatedInput label="Cidade/UF" value={`${formData.cidade?.nome || ''} - ${formData.cidade?.estado?.uf || ''}`} readOnly />
+                    <ValidatedInput label="CEP" value={formData.cep || ''} readOnly />
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <h4 className="text-md font-medium text-gray-900">Selecione o Tipo de Vaga</h4>
+              <div className="flex flex-col space-y-3 mt-2">
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${formData.tipoVaga === 'INTERNO' ? 'border-green-600 bg-green-50' : 'border-gray-300'}`}>
+                      <input type="radio" name="tipoVaga" value="INTERNO" checked={formData.tipoVaga === 'INTERNO'} onChange={(e) => handleInputChange('tipoVaga', e.target.value)} className="h-4 w-4"/>
+                      <span className="ml-3 text-sm font-medium">Vaga Interna (Aluno ou Servidor IFCE)</span>
+                  </label>
+                  <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${formData.tipoVaga === 'EXTERNO' ? 'border-green-600 bg-green-50' : 'border-gray-300'}`}>
+                      <input type="radio" name="tipoVaga" value="EXTERNO" checked={formData.tipoVaga === 'EXTERNO'} onChange={(e) => handleInputChange('tipoVaga', e.target.value)} className="h-4 w-4"/>
+                      <span className="ml-3 text-sm font-medium">Vaga Externa (Comunidade em Geral)</span>
+                  </label>
+              </div>
+            </div>
+
+            <div className="border-t pt-6">
+              <ValidatedInput 
+                label="Matrícula / SIAPE"
+                value={formData.matricula || ''}
+                onChange={(e) => handleInputChange('matricula', e.target.value)}
+                placeholder="Obrigatório para Vaga Interna"
+                disabled={formData.tipoVaga !== 'INTERNO'}
               />
             </div>
           </div>
-        )
-      
+        );
+        
+      // --- PASSO 2: DOCUMENTOS (PARA TODOS) ---
       case 2:
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Endereço *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.endereco}
-                  onChange={(e) => handleInputChange('endereco', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nº *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.numero}
-                  onChange={(e) => handleInputChange('numero', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
+            <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-green-800">Envio de Documentos</h3>
+                {formData.tipoVaga === 'INTERNO' ? (
+                    <p className="text-gray-600">Anexe um comprovante de matrícula ou de vínculo como servidor.</p>
+                ) : (
+                    <p className="text-gray-600">Por favor, faça o upload dos documentos obrigatórios.</p>
+                )}
+               <FileUpload
+
+                        onFilesChange={(files) => handleInputChange('uploadedFiles', files)}
+                        acceptedTypes=".pdf,.jpg,.jpeg,.png" maxFiles={5} maxSize={10}
+                    />
+                <ul className="list-disc list-inside text-sm text-gray-600 space-y-1 pt-2">
+                    {formData.tipoVaga === 'INTERNO' ? (
+                        <li>Comprovante de Matrícula ou Vínculo</li>
+                    ) : (
+                        <>
+                            <li>Cópia do RG e CPF</li>
+                            <li>Cópia do Comprovante de endereço</li>
+                            <li>Se os <b>requisitos</b> do curso exigir algum certificado anexe-o aqui também</li>
+                        </>
+                    )}
+                </ul>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Complemento
-              </label>
-              <input
-                type="text"
-                value={studentData.complemento}
-                onChange={(e) => handleInputChange('complemento', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Bairro *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.bairro}
-                  onChange={(e) => handleInputChange('bairro', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  CEP *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.cep}
-                  onChange={(e) => handleInputChange('cep', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="00000-000"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cidade *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.cidade}
-                  onChange={(e) => handleInputChange('cidade', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-        )
-      
+        );
+        
+      // --- PASSO 3: CONFIRMAÇÃO FINAL ---
       case 3:
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email *
-                </label>
-                <input
-                  type="email"
-                  value={studentData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone Celular *
-                </label>
-                <input
-                  type="tel"
-                  value={studentData.telefoneCelular}
-                  onChange={(e) => handleInputChange('telefoneCelular', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="(00) 00000-0000"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone Residencial
-                </label>
-                <input
-                  type="tel"
-                  value={studentData.telefoneResidencial}
-                  onChange={(e) => handleInputChange('telefoneResidencial', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="(00) 0000-0000"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Telefone Comercial
-                </label>
-                <input
-                  type="tel"
-                  value={studentData.telefoneComercial}
-                  onChange={(e) => handleInputChange('telefoneComercial', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="(00) 0000-0000"
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Profissão
-                </label>
-                <input
-                  type="text"
-                  value={studentData.profissao}
-                  onChange={(e) => handleInputChange('profissao', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Naturalidade *
-                </label>
-                <input
-                  type="text"
-                  value={studentData.naturalidade}
-                  onChange={(e) => handleInputChange('naturalidade', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nº de Matrícula
-              </label>
-              <input
-                type="text"
-                value={studentData.numeroMatricula}
-                onChange={(e) => handleInputChange('numeroMatricula', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-          </div>
-        )
-      
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Documentos Necessários
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Faça upload dos documentos obrigatórios para completar sua inscrição
-              </p>
-            </div>
-            
-            <FileUpload
-              onFilesChange={setUploadedFiles}
-              acceptedTypes=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-              maxFiles={5}
-              maxSize={10}
-            />
-            
-            <div className="space-y-3">
-              <h4 className="font-medium text-gray-900">Documentos obrigatórios:</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li>• Cópia do RG ou CNH</li>
-                <li>• Cópia do CPF</li>
-                <li>• Comprovante de residência</li>
-                <li>• Foto 3x4 (opcional)</li>
-              </ul>
-            </div>
-          </div>
-        )
-      
-      case 5:
-        return (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Confirmação da Inscrição
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Revise os dados e confirme sua inscrição no curso
-              </p>
-            </div>
-            
+            <div className="text-center"><h3 className="text-lg font-medium">Confirmação da Inscrição</h3></div>
             <div className="bg-gray-50 rounded-lg p-6">
-              <h4 className="font-medium text-gray-900 mb-4">Resumo da Inscrição:</h4>
+              <h4 className="font-medium text-gray-900 mb-4">Resumo:</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Curso:</span>
-                  <span className="font-medium">{course?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Aluno:</span>
-                  <span className="font-medium">{studentData.nome} {studentData.sobrenome}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
-                  <span className="font-medium">{studentData.email}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Telefone:</span>
-                  <span className="font-medium">{studentData.telefoneCelular}</span>
-                </div>
+                <div className="flex justify-between"><span>Curso:</span><span className="font-medium">{course?.nome}</span></div>
+                <div className="flex justify-between"><span>Aluno:</span><span className="font-medium">{formData.user?.firstName} {formData.user?.lastName}</span></div>
+                <div className="flex justify-between"><span>Tipo de Vaga:</span><span className="font-medium">{formData.tipoVaga}</span></div>
+                {formData.matricula && <div className="flex justify-between"><span>Matrícula/SIAPE:</span><span className="font-medium">{formData.matricula}</span></div>}
+                {formData.tipoVaga === 'EXTERNO' && <div className="flex justify-between"><span>Documentos:</span><span className="font-medium">{formData.uploadedFiles?.length || 0} arquivo(s)</span></div>}
               </div>
             </div>
-            
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Atenção:</strong> Após confirmar a inscrição, você receberá um email de confirmação. 
-                Mantenha seus dados atualizados para receber informações importantes sobre o curso.
-              </p>
-            </div>
+            <div className="bg-yellow-50 border ..."><p className="text-sm ..."><strong>Atenção:</strong> Sua inscrição será enviada para análise.</p></div>
           </div>
-        )
+        );
       
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  if (!course) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Curso não encontrado</h1>
-          <button
-            onClick={() => navigate('/courses')}
-            className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Voltar aos Cursos
-          </button>
-        </div>
-      </div>
-    )
-  }
+  if (!course && !loading) { return <div>Curso não encontrado...</div>; }
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
       <header className="bg-green-800 rounded-b-2xl px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center p-1">
-              <Logo size="sm" />
-            </div>
-            <div className="text-white">
-              <div className="text-sm font-medium">Instituto Federal de Educação</div>
-              <div className="text-sm">Campus Ceará</div>
-            </div>
-          </div>
-          
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => navigate('/courses')}
-              className="bg-white text-green-800 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-50 transition-colors"
-            >
-              Voltar
-            </button>
-          </div>
-        </div>
+        {/* ... seu header aqui ... */}
       </header>
-
-      {/* Conteúdo principal */}
       <main className="px-6 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Título */}
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-green-600 mb-2">
-              Inscrição no Curso: {course.name}
-            </h1>
-            <p className="text-gray-600">
-              Preencha os dados abaixo para se inscrever no curso
-            </p>
+            <h1 className="text-2xl font-bold text-green-600">Inscrição no Curso: {course?.nome}</h1>
+            <p className="text-gray-600">Siga os passos para completar sua inscrição.</p>
           </div>
-
-          {/* Formulário */}
-          <div className="bg-white border-2 border-green-600 rounded-lg p-8">
-            {renderStepContent()}
-          </div>
-
-          {/* Navegação */}
+          <Card><CardContent className="p-8">{renderStepContent()}</CardContent></Card>
           <div className="flex items-center justify-between mt-8">
-            <button
-              onClick={prevStep}
-              disabled={currentStep === 1}
-              className="flex items-center space-x-2 px-4 py-2 text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Anterior</span>
-            </button>
-
-            {/* Indicador de progresso */}
+            <Button onClick={prevStep} disabled={currentStep === 1 || isSubmitting} variant="outline"><ArrowLeft className="w-4 h-4 mr-2"/> Anterior</Button>
             <div className="flex items-center space-x-2">
-              {Array.from({ length: totalSteps }, (_, index) => (
-                <div
-                  key={index}
-                  className={`w-3 h-3 rounded-full ${
-                    index + 1 === currentStep
-                      ? 'bg-red-500'
-                      : index + 1 < currentStep
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
-                  }`}
-                />
-              ))}
+              {Array.from({ length: totalSteps }, (_, i) => (<div key={i} className={`w-3 h-3 rounded-full ${i + 1 === currentStep ? 'bg-red-500' : i + 1 < currentStep ? 'bg-green-500' : 'bg-gray-300'}`} />))}
             </div>
-
             {currentStep < totalSteps ? (
-              <button
-                onClick={nextStep}
-                className="flex items-center space-x-2 px-4 py-2 text-green-600 hover:text-green-800"
-              >
-                <span>Próximo</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <Button onClick={nextStep} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">Próximo <ArrowRight className="w-4 h-4 ml-2"/></Button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Enviando...' : 'Confirmar Inscrição'}
-              </button>
+              <Button onClick={handleSubmit} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">{isSubmitting ? 'Enviando...' : 'Confirmar Inscrição'}</Button>
             )}
           </div>
         </div>
       </main>
     </div>
-  )
+  );
 }

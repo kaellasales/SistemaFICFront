@@ -24,14 +24,14 @@ const getById = (id: string) => {
 };
 
 const create = (data: any) => {
-  return api.post('\/cursos/', data);
+  return api.post('/cursos/', data);
 };
 
 const update = (id: string, data: any) => {
-  return api.put(`cursos/${id}/`, data);
+  return api.patch(`/cursos/${id}/`, data);
 };
 
-const destroy = (id: string) => {
+const deleteCourse = (id: string) => {
   return api.delete(`/cursos/${id}/`);
 }
 
@@ -40,5 +40,5 @@ export const cursoService = {
   getById,
   create,
   update,
-  destroy,
+  deleteCourse,
 };

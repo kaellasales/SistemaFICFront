@@ -19,54 +19,33 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    label: 'Dashboard',
-    href: '/dashboard',
-    icon: LayoutDashboard,
-    roles: ['aluno', 'professor', 'cca'], // Todos veem uma dashboard
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['aluno', 'professor', 'cca'] },
+  
+  // --- ALUNO ---
+  { label: 'Cursos', href: '/courses', icon: BookOpen, roles: ['aluno'] },
+  { label: 'Minhas Inscrições', href: '/enrollments', icon: FileText, roles: ['aluno'] },
+  { label: 'Certificados', href: '/certificates', icon: Award, roles: ['aluno'] }, // CCA também pode ver
+  
+  // --- PROFESSOR ---
+  { label: 'Meus Cursos', href: '/my-courses', icon: BookOpen, roles: ['professor'] },
+  
+  // --- CCA (A GRANDE MUDANÇA) ---
+  { 
+    label: 'Analisar Cursos', // <<< NOME MAIS CLARO PARA O CCA
+    href: '/admin/courses', // <<< UMA NOVA ROTA PARA A LISTA DE CURSOS DO CCA
+    icon: BookOpen, 
+    roles: ['cca'] 
   },
-  {
-    label: 'Cursos',
-    href: '/courses',
-    icon: BookOpen,
-    roles: ['aluno'], // Apenas alunos veem a "vitrine" de cursos
+  { 
+    label: 'Gerenciar Professores', // <<< NOME MAIS CLARO
+    href: '/professores', // <<< O MESMO LINK DA AÇÃO RÁPIDA
+    icon: Users, 
+    roles: ['cca'] 
   },
-  {
-    label: 'Meus Cursos',
-    href: '/my-courses',
-    icon: BookOpen,
-    roles: ['professor'], // Apenas professores veem os cursos que eles criaram
-  },
-  {
-    label: 'Minhas Inscrições',
-    href: '/enrollments',
-    icon: FileText,
-    roles: ['aluno'],
-  },
-  {
-    label: 'Certificados',
-    href: '/certificates',
-    icon: Award,
-    roles: ['aluno', 'cca'],
-  },
-  {
-    label: 'Relatórios',
-    href: '/reports',
-    icon: BarChart3,
-    roles: ['professor', 'cca'],
-  },
-  {
-    label: 'Gerenciar Usuários',
-    href: '/users',
-    icon: Users,
-    roles: ['cca'], // Apenas o CCA gerencia usuários
-  },
-  {
-    label: 'Configurações',
-    href: '/settings',
-    icon: Settings,
-    roles: ['aluno', 'professor', 'cca'],
-  },
+
+  // --- COMPARTILHADOS ---
+  { label: 'Relatórios', href: '/reports', icon: BarChart3, roles: ['professor', 'cca'] },
+  { label: 'Configurações', href: '/settings', icon: Settings, roles: ['aluno', 'professor', 'cca'] },
 ];
 
 

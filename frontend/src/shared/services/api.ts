@@ -4,10 +4,6 @@ import { useAuthStore } from '@/shared/stores/authStore'
 // Cria a instância do Axios
 const api = axios.create({
   baseURL: (import.meta as any).env.VITE_API_URL || 'http://localhost:8080',
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 // Interceptor de requisição: adiciona token se existir

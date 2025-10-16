@@ -8,18 +8,17 @@ import { ProfileCompletionGuard } from '@/shared/components/ProfileCompletionGua
 
 // --- Layouts e Páginas ---
 import { Layout } from '@/components/layout/Layout';
-import { LandingPage } from '@/pages/LandingPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 
 // Páginas de Autenticação
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegisterPage } from '@/pages/auth/RegisterPage';
-import { ProfessorRegisterPage } from '@/pages/auth/ProfessorRegisterPage';
+import { ProfessorFormPage } from '@/pages/auth/ProfessorRegisterPage';
 
-// Página de Perfil do Aluno
+// Página de Perfil do Aluno (corrigindo para pasta 'aluno' singular)
 import { CompleteProfilePage } from '@/pages/alunos/completeProfilePage';
 
-// Página de Cursos >>>
+// <<< CORREÇÃO: Caminho da pasta 'courses' (com 'o') ajustado >>>
 import { CoursesPage } from '@/pages/courses/CoursesPage';
 import { MyCoursesPage } from '@/pages/courses/MyCoursesPage';
 import { CourseFormPage } from '@/pages/courses/CourseFormPage';
@@ -32,6 +31,7 @@ import { ReportsPage } from '@/pages/reports/ReportsPage';
 import { ProfessoresPage } from '@/pages/professor/ProfessoresPage';
 import { ProfessorDetailPage } from '@/pages/professor/ProfessorDetailPage';
 import { EnrollmentPage } from '@/pages/course-enrollment/EnrollmentPage';
+import { AdminCoursesPage } from '@/pages/admin/AdminCoursesPage';
 
 function App() {
   const { user } = useAuthStore();
@@ -42,7 +42,7 @@ function App() {
       <Toaster position="top-right" reverseOrder={false} />
       <Routes>
         {/* --- Rotas Públicas --- */}
-        <Route path="/" element={<LandingPage />} />
+        <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}/>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         
@@ -51,8 +51,7 @@ function App() {
         <Route path="/courses/create" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
         <Route path="/courses/:id/edit" element={<ProtectedRoute><CourseFormPage /></ProtectedRoute>} />
         <Route path="/enrollment" element={<ProtectedRoute><EnrollmentPage /></ProtectedRoute>} />
-        <Route path="/courses/:courseId/enrollments" element={<ProtectedRoute><CourseEnrollmentsPage /></ProtectedRoute>} />
-
+        
         {/* --- Área Principal da Aplicação (Com Layout e Guarda de Perfil) --- */}
         <Route
           path="/*"
@@ -63,10 +62,10 @@ function App() {
                   <Routes>
                     <Route path="/dashboard" element={<DashboardPage />} />
                     
-                    {/* <<< REATORAÇÃO: Rotas agrupadas por permissão >>> */}
+                    {/* <<< REATORAÇÃO: Blocos de rota EXCLUSIVOS por perfil >>> */}
 
-                    {/* Rotas visíveis para ALUNO e CCA */}
-                    {(userGroups.includes('ALUNO') || userGroups.includes('CCA')) && (
+                    {/* Rotas visíveis APENAS para ALUNO */}
+                    {userGroups.includes('ALUNO') && (
                       <>
                         <Route path="/courses" element={<CoursesPage />} />
                         <Route path="/enrollments" element={<EnrollmentsPage />} />
@@ -74,8 +73,8 @@ function App() {
                       </>
                     )}
                     
-                    {/* Rotas visíveis para PROFESSOR e CCA */}
-                    {(userGroups.includes('PROFESSOR') || userGroups.includes('CCA')) && (
+                    {/* Rotas visíveis APENAS para PROFESSOR */}
+                    {userGroups.includes('PROFESSOR') && (
                       <>
                         <Route path="/my-courses" element={<MyCoursesPage />} />
                         <Route path="/reports" element={<ReportsPage />} />
@@ -85,13 +84,15 @@ function App() {
                     {/* Rotas visíveis APENAS para CCA */}
                     {userGroups.includes('CCA') && (
                       <>
+                        <Route path="/admin/courses" element={<AdminCoursesPage />} />
                         <Route path="/professores" element={<ProfessoresPage />}/>
-                        <Route path="/professores/cadastrar" element={<ProfessorRegisterPage />}/>
+                        <Route path="/professores/:id/edit" element={<ProfessorFormPage />} /> 
+                        <Route path="/professores/cadastrar" element={<ProfessorFormPage />}/>
                         <Route path="/professores/:id" element={<ProfessorDetailPage />} />
+                        <Route path="/courses/:courseId/enrollments" element={<CourseEnrollmentsPage />} />
                       </>
                     )}
                     
-                    {/* Redirecionamento padrão para qualquer rota não encontrada */}
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>
                 </Layout>

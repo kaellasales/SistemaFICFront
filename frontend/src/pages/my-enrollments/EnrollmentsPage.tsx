@@ -1,292 +1,166 @@
-import { useState, useEffect } from 'react'
-import { FileText, Clock, CheckCircle, XCircle, Eye } from 'lucide-react'
-import { useAuthStore } from '@/shared/stores/authStore'
-import { enrollmentService, type EnrollmentResponse } from '@/shared/services/enrollmentService'
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useMyEnrollments } from '@/features/enrollments/hooks/useMyEnrollments'; // <<< O "Gerente" do Aluno
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { 
+  FileText, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  Eye,
+  Search,
+  BookOpen,
+  Users,
+  Paperclip
+} from 'lucide-react';
+import { Enrollment } from '@/features/enrollments/types/enrollment.types';
 
 export function EnrollmentsPage() {
-  const { user } = useAuthStore()
-  const [searchTerm, setSearchTerm] = useState('')
-  const [enrollments, setEnrollments] = useState<EnrollmentResponse[]>([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  
+  // --- TODA A LÓGICA E DADOS VÊM DO HOOK ---
+  const { 
+    enrollments, 
+    loading, 
+    searchTerm, 
+    setSearchTerm 
+  } = useMyEnrollments();
+  
+  // O estado do modal continua sendo local da página
+  const [viewingEnrollment, setViewingEnrollment] = useState<Enrollment | null>(null);
 
-  useEffect(() => {
-    const loadEnrollments = async () => {
-      try {
-        const enrollmentsData = await enrollmentService.getMyEnrollments()
-        setEnrollments(enrollmentsData)
-      } catch (error) {
-        console.error('Erro ao carregar inscrições:', error)
-        // Em caso de erro, usar dados mockados
-        setEnrollments(mockEnrollments)
-      } finally {
-        setLoading(false)
-      }
-    }
-    
-    loadEnrollments()
-  }, [])
+  // --- FUNÇÕES AUXILIARES PARA A UI ---
+  const getStatusInfo = (status: string) => {
+    const statusMap: { [key: string]: { text: string; icon: React.ElementType; color: string } } = {
+      'AGUARDANDO_VALIDACAO': { text: 'Aguardando Validação', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
+      'CONFIRMADA': { text: 'Inscrição Confirmada', icon: CheckCircle, color: 'bg-green-100 text-green-800' },
+      'CANCELADA': { text: 'Cancelada', icon: XCircle, color: 'bg-red-100 text-red-800' },
+      'LISTA_ESPERA': { text: 'Lista de Espera', icon: Users, color: 'bg-blue-100 text-blue-800' },
+    };
+    return statusMap[status] || { text: status, icon: FileText, color: 'bg-gray-100 text-gray-800' };
+  };
 
-  // Mock data - em produção, viria da API
-  const mockEnrollments: EnrollmentResponse[] = [
-    {
-      id: '1',
-      course: { 
-        id: '1',
-        name: 'Programação Web com React',
-        enrollmentEndDate: '15/03/2024',
-        status: 'Disponível',
-        description: 'Curso completo de programação web',
-        startDate: '01/04/2024',
-        endDate: '30/06/2024',
-        vacancies: 30,
-        schedule: 'Segunda a Quinta',
-        classTime: '19:00 - 22:00',
-        requirements: 'Conhecimento básico em programação'
-      },
-      student: { name: 'João Silva', email: 'joao@email.com' },
-      status: 'pending' as const,
-      createdAt: '2024-01-15',
-      documents: 3,
-    },
-    {
-      id: '2',
-      course: { 
-        id: '2',
-        name: 'Design Gráfico Digital',
-        enrollmentEndDate: '20/03/2024',
-        status: 'Disponível',
-        description: 'Curso de design gráfico digital',
-        startDate: '01/04/2024',
-        endDate: '30/06/2024',
-        vacancies: 25,
-        schedule: 'Terça e Quinta',
-        classTime: '14:00 - 17:00',
-        requirements: 'Conhecimento básico em informática'
-      },
-      student: { name: 'Maria Santos', email: 'maria@email.com' },
-      status: 'under_review' as const,
-      createdAt: '2024-01-14',
-      documents: 2,
-    },
-    {
-      id: '3',
-      course: { 
-        id: '3',
-        name: 'Excel Avançado',
-        enrollmentEndDate: '25/03/2024',
-        status: 'Disponível',
-        description: 'Curso de Excel avançado',
-        startDate: '01/04/2024',
-        endDate: '30/06/2024',
-        vacancies: 20,
-        schedule: 'Segunda e Quarta',
-        classTime: '19:00 - 22:00',
-        requirements: 'Conhecimento básico em Excel'
-      },
-      student: { name: 'Pedro Costa', email: 'pedro@email.com' },
-      status: 'approved' as const,
-      createdAt: '2024-01-10',
-      documents: 4,
-    },
-    {
-      id: '4',
-      course: { 
-        id: '4',
-        name: 'Programação Web com React',
-        enrollmentEndDate: '15/03/2024',
-        status: 'Disponível',
-        description: 'Curso completo de programação web',
-        startDate: '01/04/2024',
-        endDate: '30/06/2024',
-        vacancies: 30,
-        schedule: 'Segunda a Quinta',
-        classTime: '19:00 - 22:00',
-        requirements: 'Conhecimento básico em programação'
-      },
-      student: { name: 'Ana Lima', email: 'ana@email.com' },
-      status: 'rejected' as const,
-      createdAt: '2024-01-12',
-      documents: 2,
-      rejectionReason: 'Documentos incompletos',
-    },
-  ]
-
-  const filteredEnrollments = enrollments.filter(enrollment =>
-    enrollment.course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    enrollment.student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    enrollment.student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800'
-      case 'under_review':
-        return 'bg-blue-100 text-blue-800'
-      case 'approved':
-        return 'bg-green-100 text-green-800'
-      case 'rejected':
-        return 'bg-red-100 text-red-800'
-      default:
-        return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Pendente'
-      case 'under_review':
-        return 'Em Análise'
-      case 'approved':
-        return 'Aprovado'
-      case 'rejected':
-        return 'Reprovado'
-      default:
-        return status
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4" />
-      case 'under_review':
-        return <FileText className="h-4 w-4" />
-      case 'approved':
-        return <CheckCircle className="h-4 w-4" />
-      case 'rejected':
-        return <XCircle className="h-4 w-4" />
-      default:
-        return <FileText className="h-4 w-4" />
-    }
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-80px)]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando suas inscrições...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div style={{ padding: '24px', backgroundColor: 'white', minHeight: '100vh' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: 'black' }}>
-        Inscrições
-      </h1>
-      <p style={{ color: '#666', marginBottom: '24px' }}>
-        {user?.role === 'candidate' 
-          ? 'Acompanhe o status das suas inscrições'
-          : user?.role === 'professor'
-          ? 'Gerencie as inscrições dos seus cursos'
-          : 'Analise e gerencie todas as inscrições do sistema'
-        }
-      </p>
-
-      {/* Campo de busca */}
-      <div style={{ marginBottom: '24px' }}>
-        <input
-          type="text"
-          placeholder="Buscar inscrições..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '12px',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            fontSize: '16px'
-          }}
-        />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-secondary-900">Minhas Inscrições</h1>
+        <p className="text-secondary-600 mt-2">Acompanhe o status de todas as suas solicitações de matrícula.</p>
       </div>
 
-      {/* Lista de inscrições */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '32px' }}>
-          <p style={{ color: '#666' }}>Carregando inscrições...</p>
-        </div>
-      ) : (
-        <div>
-          {filteredEnrollments.map((enrollment) => (
-          <div key={enrollment.id} style={{
-            backgroundColor: 'white',
-            border: '1px solid #e5e5e5',
-            borderRadius: '8px',
-            padding: '24px',
-            marginBottom: '16px'
-          }}>
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    {getStatusIcon(enrollment.status)}
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {enrollment.course.name}
-                    </h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(enrollment.status)}`}>
-                      {getStatusLabel(enrollment.status)}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                    <div>
-                      <span className="font-medium">Candidato:</span> {enrollment.student.name}
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nome do curso..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {enrollments.length > 0 ? (
+        <div className="space-y-4">
+          {enrollments.map((enrollment) => {
+            const statusInfo = getStatusInfo(enrollment.status);
+            const Icon = statusInfo.icon;
+            return (
+              <Card key={enrollment.id} className="overflow-hidden">
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className="w-12 h-12 bg-gray-100 rounded-md flex-shrink-0 flex items-center justify-center">
+                      <BookOpen className="h-6 w-6 text-gray-500" />
                     </div>
-                    <div>
-                      <span className="font-medium">Email:</span> {enrollment.student.email}
-                    </div>
-                    <div>
-                      <span className="font-medium">Data da Inscrição:</span> {new Date(enrollment.createdAt).toLocaleDateString('pt-BR')}
-                    </div>
-                  </div>
-                  
-                  {enrollment.rejectionReason && (
-                    <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                      <p className="text-sm text-red-800">
-                        <span className="font-medium">Motivo da reprovação:</span> {enrollment.rejectionReason}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 truncate">{enrollment.curso.nome}</p>
+                      <p className="text-xs text-gray-500">
+                        Inscrição em: {new Date(enrollment.dataInscricao).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <div className="text-right text-sm text-gray-600">
-                    <p>{enrollment.documents} documentos</p>
                   </div>
-                  
-                  <div className="flex space-x-2">
-                    <button className="px-3 py-1 border border-gray-300 bg-white text-gray-700 rounded text-sm hover:bg-gray-50 transition-colors">
-                      <Eye className="h-4 w-4 mr-1 inline" />
-                      Ver
-                    </button>
-                    
-                    {(user?.role === 'professor' || user?.role === 'admin') && enrollment.status === 'pending' && (
-                      <>
-                        <button className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors">
-                          <CheckCircle className="h-4 w-4 mr-1 inline" />
-                          Aprovar
-                        </button>
-                        <button className="px-3 py-1 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 transition-colors">
-                          <XCircle className="h-4 w-4 mr-1 inline" />
-                          Reprovar
-                        </button>
-                      </>
-                    )}
+                  <div className="flex items-center space-x-4">
+                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}`}>
+                      {statusInfo.text}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={() => setViewingEnrollment(enrollment)}>
+                      <Eye className="h-4 w-4 mr-1"/> Ver Dossiê
+                    </Button>
                   </div>
-                </div>
-              </div>
-          </div>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
-      )}
-
-      {filteredEnrollments.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Nenhuma inscrição encontrada
-          </h3>
-          <p className="text-gray-600">
-            {user?.role === 'candidate' 
-              ? 'Você ainda não possui inscrições. Explore os cursos disponíveis!'
-              : 'Não há inscrições que correspondam aos filtros aplicados.'
+      ) : (
+        <div className="text-center py-16 bg-white rounded-lg border">
+          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma inscrição encontrada</h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            {searchTerm 
+              ? 'Não encontramos inscrições com os termos da sua busca.'
+              : 'Você ainda não possui inscrições. Explore os cursos disponíveis!'
             }
           </p>
         </div>
       )}
+      
+      {/* Modal de Dossiê para o Aluno */}
+      {viewingEnrollment && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setViewingEnrollment(null)}>
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>Dossiê da Inscrição</CardTitle>
+                  <CardDescription>Curso: {viewingEnrollment.curso.nome}</CardDescription>
+                </div>
+                <button onClick={() => setViewingEnrollment(null)} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm text-gray-500">Status da sua Inscrição</p>
+                <p className={`font-semibold ${getStatusInfo(viewingEnrollment.status).color.replace('bg-', 'text-')}`}>{getStatusInfo(viewingEnrollment.status).text}</p>
+              </div>
+              <div className="border-t pt-4">
+                <h3 className="font-semibold text-gray-800 mb-2">Documentos Enviados</h3>
+                {viewingEnrollment.documentos && viewingEnrollment.documentos.length > 0 ? (
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    {viewingEnrollment.documentos.map(doc => (
+                      <li key={doc.id}>
+                        <a href={doc.arquivo} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">
+                          <Paperclip className="h-4 w-4 mr-2" />
+                          {doc.nomeOriginal}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-gray-500">Nenhum documento foi enviado nesta inscrição.</p>
+                )}
+              </div>
+            </CardContent>
+            <div className="p-4 bg-gray-50 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setViewingEnrollment(null)}>Fechar</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }
-

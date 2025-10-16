@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuthStore } from '@/shared/stores/authStore';
 import { useCourseStore } from '@/features/courses/stores/useCourseStore';
+import { useEnrollmentStore } from '@/features/enrollments/stores/useEnrollmentStore';
 
 // Interface para padronizar as ações rápidas
 interface QuickAction {
@@ -26,50 +27,66 @@ interface QuickAction {
 export function DashboardPage() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  
+  // --- PEGANDO AS FERRAMENTAS DAS STORES ---
   const { fetchCourses } = useCourseStore();
+  const { fetchMyEnrollments, fetchPendingEnrollments } = useEnrollmentStore();
 
   const [loading, setLoading] = useState(true);
-  // ESTADO PARA GUARDAR OS DADOS FINAIS (MOCK + REAIS)
   const [dashboardData, setDashboardData] = useState<{
     stats: any[],
     recentActivities: any[],
     quickActions: QuickAction[]
   }>({
-    stats: [],
-    recentActivities: [],
-    quickActions: [],
+    stats: [], recentActivities: [], quickActions: [],
   });
   
-  // EFEITO PARA BUSCAR DADOS REAIS E MESCLAR COM OS MOCKS
+  // --- LÓGICA PARA BUSCAR DADOS REAIS E MESCLAR COM OS MOCKS ---
   useEffect(() => {
     const loadAndMergeData = async () => {
+      const groups = user?.groups || [];
       try {
-        // 1. Busca os cursos reais da API
-        await fetchCourses();
-        const realCourses = useCourseStore.getState().courses;
+        let coursesPromise = fetchCourses();
+        let enrollmentsPromise;
 
-        // 2. Pega os dados mockados como base
-        const mockData = getMockDashboardData();
-
-        // 3. Mescla os dados: substitui os valores mockados pelos reais
-        const groups = user?.groups || [];
-        let statLabelToUpdate = '';
-        if (groups.includes('PROFESSOR')) {
-            statLabelToUpdate = 'Meus Cursos';
-        } else if (groups.includes('ALUNO')) {
-            statLabelToUpdate = 'Cursos Disponíveis';
-        } else if (groups.includes('CCA')) {
-            statLabelToUpdate = 'Total de Cursos';
-        }
-
-        if (statLabelToUpdate) {
-            const courseStat = mockData.stats.find(s => s.label === statLabelToUpdate);
-            if (courseStat) {
-                courseStat.value = realCourses.length.toString();
-            }
+        // Decide qual lista de inscrições buscar com base no perfil
+        if (groups.includes('CCA')) {
+            enrollmentsPromise = fetchPendingEnrollments();
+        } else { // Para Aluno ou Professor
+            enrollmentsPromise = fetchMyEnrollments();
         }
         
-        // 4. Salva os dados finais (mesclados) no estado da página
+        await Promise.all([coursesPromise, enrollmentsPromise]);
+        
+        const realCourses = useCourseStore.getState().courses;
+        const realMyEnrollments = useEnrollmentStore.getState().myEnrollments;
+        const realPendingEnrollments = useEnrollmentStore.getState().pendingEnrollments;
+
+        const mockData = getMockDashboardData();
+        
+        // Atualiza os valores do mock com os dados reais
+        if (groups.includes('ALUNO')) {
+            const coursesStat = mockData.stats.find(s => s.label === 'Cursos Disponíveis');
+            const enrollmentsStat = mockData.stats.find(s => s.label === 'Minhas Inscrições');
+            const analysisStat = mockData.stats.find(s => s.label === 'Em Análise');
+
+            if (coursesStat) coursesStat.value = realCourses.length.toString();
+            if (enrollmentsStat) enrollmentsStat.value = realMyEnrollments.length.toString();
+            if (analysisStat) {
+                const emAnaliseCount = realMyEnrollments.filter(e => e.status === 'AGUARDANDO_VALIDACAO').length;
+                analysisStat.value = emAnaliseCount.toString();
+            }
+        } else if (groups.includes('PROFESSOR')) {
+            const myCoursesStat = mockData.stats.find(s => s.label === 'Meus Cursos');
+            if (myCoursesStat) myCoursesStat.value = realCourses.length.toString();
+        } else if (groups.includes('CCA')) {
+            const totalCoursesStat = mockData.stats.find(s => s.label === 'Total de Cursos');
+            const pendingEnrollmentsStat = mockData.stats.find(s => s.label === 'Inscrições Pendentes');
+
+            if (totalCoursesStat) totalCoursesStat.value = realCourses.length.toString();
+            if (pendingEnrollmentsStat) pendingEnrollmentsStat.value = realPendingEnrollments.length.toString();
+        }
+        
         setDashboardData(mockData);
 
       } catch (error) {
@@ -82,10 +99,12 @@ export function DashboardPage() {
 
     if (user?.groups) {
         loadAndMergeData();
+    } else {
+        setLoading(false); // Garante que o loading para se não houver usuário
     }
-  }, [user, fetchCourses]);
+  }, [user, fetchCourses, fetchMyEnrollments, fetchPendingEnrollments]);
 
-  // Sua função original que serve como "molde" para os dados mockados
+  // Sua função original que serve como "molde"
   const getMockDashboardData = () => {
     const groups = user?.groups || [];
 
@@ -93,18 +112,17 @@ export function DashboardPage() {
       return {
         stats: [
           { label: 'Total de Cursos', value: '...', icon: BookOpen, color: 'text-primary-600' },
-          { label: 'Inscrições Pendentes', value: '156', icon: FileText, color: 'text-blue-600' },
-          { label: 'Usuários Ativos', value: '342', icon: Users, color: 'text-green-600' },
-          { label: 'Certificados Emitidos', value: '89', icon: Award, color: 'text-purple-600' },
+          { label: 'Inscrições Pendentes', value: '...', icon: FileText, color: 'text-blue-600' },
+          { label: 'Certificados Emitidos', value: '0', icon: Award, color: 'text-purple-600' },
         ],
         recentActivities: [
-          { title: '156 inscrições aguardando análise', status: 'Pendente', date: '2025-10-01' },
+          { title: 'Inscrições aguardando análise', status: 'Pendente', date: '2025-10-01' },
           { title: 'Novo professor cadastrado', status: 'Completo', date: '2025-09-30' },
         ],
         quickActions: [
-          { label: 'Professores', description: 'Ver lista completa de professores', icon: Users, color: 'text-green-600', path: '/professores' },
-          { label: 'Analisar Inscrições', description: '156 pendentes', icon: FileText, color: 'text-primary-600', path: '/enrollments' },
-        ] as QuickAction[]
+          { label: 'Professores', description: 'Ver lista de professores', icon: Users, color: 'text-green-600', path: '/professores' },
+          { label: 'Analisar Inscrições', description: 'Valide as inscrições pendentes', icon: FileText, color: 'text-primary-600', path: '/admin/courses' },
+        ] as QuickAction[],
       };
     } else if (groups.includes('PROFESSOR')) {
       return {
@@ -115,21 +133,21 @@ export function DashboardPage() {
           { label: 'Pendentes', value: '12', icon: Clock, color: 'text-yellow-600' },
         ],
         recentActivities: [
-          { title: 'Novo curso "Python para Iniciantes"', status: 'Publicado', date: '2025-09-29' },
-          { title: '12 novas inscrições em "Web Design"', status: 'Pendente', date: '2025-09-28' },
+          { title: 'Novo curso "Python"', status: 'Publicado', date: '2025-09-29' },
+          { title: '12 novas inscrições', status: 'Pendente', date: '2025-09-28' },
         ],
         quickActions: [
             { label: 'Criar Novo Curso', description: 'Cadastre um novo curso', icon: BookOpen, color: 'text-primary-600', path: '/courses/create' },
             { label: 'Meus Cursos', description: 'Gerencie seus cursos', icon: FileText, color: 'text-blue-600', path: '/my-courses' },
-        ] as QuickAction[]
+        ] as QuickAction[],
       };
     } else if (groups.includes('ALUNO')) {
       return {
         stats: [
           { label: 'Cursos Disponíveis', value: '...', icon: BookOpen, color: 'text-primary-600' },
-          { label: 'Minhas Inscrições', value: '3', icon: FileText, color: 'text-blue-600' },
-          { label: 'Certificados', value: '1', icon: Award, color: 'text-green-600' },
-          { label: 'Em Análise', value: '2', icon: Clock, color: 'text-yellow-600' },
+          { label: 'Minhas Inscrições', value: '...', icon: FileText, color: 'text-blue-600' },
+          { label: 'Certificados', value: '0', icon: Award, color: 'text-green-600' },
+          { label: 'Em Análise', value: '...', icon: Clock, color: 'text-yellow-600' },
         ],
         recentActivities: [
           { title: 'Inscrição em "Programação Web"', status: 'Aprovado', date: '2025-09-30' },
@@ -138,15 +156,29 @@ export function DashboardPage() {
         quickActions: [
             { label: 'Ver Cursos Disponíveis', description: 'Explore os cursos abertos', icon: BookOpen, color: 'text-primary-600', path: '/courses' },
             { label: 'Minhas Inscrições', description: 'Acompanhe o status', icon: FileText, color: 'text-blue-600', path: '/enrollments' },
-        ] as QuickAction[]
+        ] as QuickAction[],
       };
     }
     return { stats: [], recentActivities: [], quickActions: [] };
   };
 
   const { stats, recentActivities, quickActions } = dashboardData;
-  const getStatusIcon = (status: string) => { /* ... sua função ... */ return <Clock />; };
-  const getStatusColor = (status: string) => { /* ... sua função ... */ return 'text-gray-600'; };
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Aprovado': case 'Completo': case 'Publicado': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'Pendente': return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'Reprovado': return <XCircle className="h-4 w-4 text-red-600" />;
+      default: return <TrendingUp className="h-4 w-4 text-blue-600" />;
+    }
+  };
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Aprovado': case 'Completo': case 'Publicado': return 'text-green-600';
+      case 'Pendente': return 'text-yellow-600';
+      case 'Reprovado': return 'text-red-600';
+      default: return 'text-blue-600';
+    }
+  };
 
   if (loading) {
     return (

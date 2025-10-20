@@ -85,10 +85,10 @@ export function useEnrollmentForm() {
         arquivos: formData.uploadedFiles || []
     };
 
-    toast.promise(createEnrollment(payload), {
+toast.promise(createEnrollment(payload), {
         loading: 'Enviando sua inscrição...',
-        success: 'Inscrição realizada com sucesso!',
-        error: (err: any) => `Falha: ${err.response?.data?.detail || 'Erro desconhecido'}`,
+        success: 'Inscrição enviada! Um e-mail de confirmação foi enviado para você.',
+        error: (err: any) => `Falha: ${err.response?.data?.detail || 'Verifique os dados.'}`,
     })
     .then(() => navigate('/enrollments'))
     .catch(console.error)

@@ -20,9 +20,10 @@ interface Props {
   enrollment: Enrollment;
   onClose: () => void;
   onStatusChange: (enrollmentId: number, isApproved: boolean, reason?: string) => void;
+  canAnalyze: boolean;
 }
 
-export function EnrollmentDossierModal({ enrollment, onClose, onStatusChange }: Props) {
+export function EnrollmentDossierModal({ enrollment, onClose, onStatusChange, canAnalyze}: Props) {
   const { fetchAlunoById } = useAlunoStore();
   const [detailedProfile, setDetailedProfile] = useState<Aluno | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,27 +138,26 @@ export function EnrollmentDossierModal({ enrollment, onClose, onStatusChange }: 
             </>
           )}
         </CardContent>
-        {enrollment.status === 'AGUARDANDO_VALIDACAO' && !isLoading && (
-          <div className="p-4 bg-gray-50 border-t flex justify-end space-x-3">
-            {/* --- LÓGICA DE BOTÕES INTELIGENTE --- */}
-            {!showRejectionInput ? (
-                <>
-                    <Button variant="destructive" onClick={() => setShowRejectionInput(true)}>
-                        <XCircle className="h-4 w-4 mr-2"/> Recusar
-                    </Button>
-                    <Button variant="success" onClick={handleApprove}>
-                        <CheckCircle className="h-4 w-4 mr-2"/> Aprovar
-                    </Button>
-                </>
-            ) : (
-                <>
-                    <Button variant="outline" onClick={() => setShowRejectionInput(false)}>Cancelar</Button>
-                    <Button variant="destructive" onClick={handleReject}>Confirmar Recusa</Button>
-                </>
-            )}
-          </div>
-        )}
+  {enrollment.status === 'AGUARDANDO_VALIDACAO' && !isLoading && (
+            <div className="p-4 bg-gray-50 border-t flex justify-end space-x-3">
+              {!showRejectionInput ? (
+                  <>
+                      <Button variant="destructive" onClick={() => setShowRejectionInput(true)} disabled={!canAnalyze} title={!canAnalyze ? 'A análise só está disponível após o fim das inscrições.' : 'Recusar inscrição'}>
+                          <XCircle className="h-4 w-4 mr-2"/> Recusar
+                      </Button>
+                      <Button className="bg-green-600 text-white hover:bg-green-700" onClick={handleApprove} disabled={!canAnalyze} title={!canAnalyze ? 'A análise só está disponível após o fim das inscrições.' : 'Aprovar inscrição'}>
+                          <CheckCircle className="h-4 w-4 mr-2"/> Aprovar
+                      </Button>
+                  </>
+              ) : (
+                  <>
+                      <Button variant="outline" onClick={() => setShowRejectionInput(false)}>Cancelar</Button>
+                      <Button variant="destructive" onClick={handleReject}>Confirmar Recusa</Button>
+                  </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
 }

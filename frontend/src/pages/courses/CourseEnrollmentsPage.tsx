@@ -4,85 +4,17 @@ import { useCourseEnrollments } from '@/features/enrollments/hooks/useCourseEnro
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { 
-  ArrowLeft, CheckCircle, XCircle, Clock, User, FileText, Paperclip, Users 
+  ArrowLeft, CheckCircle, XCircle, Clock, User, FileText, Users, Paperclip, Info 
 } from 'lucide-react';
 import { Enrollment } from '@/features/enrollments/types/enrollment.types';
 import { EnrollmentDossierModal } from '@/features/enrollments/components/EnrollmentDossierModal';
-
-// --- Componente Auxiliar para a Tabela (para não repetir código) ---
-const EnrollmentTable = ({ title, enrollments, onAnalyzeClick }: { title: string, enrollments: Enrollment[], onAnalyzeClick: (e: Enrollment) => void }) => {
-  const getStatusInfo = (status: string) => {
-    const statusMap: { [key: string]: { text: string; color: string } } = {
-        'CONFIRMADA': { text: 'Aprovado', color: 'bg-green-100 text-green-800' },
-        'CANCELADA': { text: 'Rejeitado', color: 'bg-red-100 text-red-800' },
-        'AGUARDANDO_VALIDACAO': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
-        'LISTA_ESPERA': { text: 'Lista de Espera', color: 'bg-blue-100 text-blue-800' },
-    };
-    return statusMap[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
-  };
-
-  if (enrollments.length === 0) {
-    return (
-        <div className="p-4 border rounded-md text-center text-gray-500">
-            <p>Nenhuma inscrição para {title.toLowerCase()}.</p>
-        </div>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <Users className="h-5 w-5 mr-3 text-gray-500" />
-          {title} ({enrollments.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aluno</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {enrollments.map((enrollment) => (
-                <tr key={enrollment.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{enrollment.aluno.user.firstName} {enrollment.aluno.user.lastName}</div>
-                    <div className="text-sm text-gray-500">{enrollment.aluno.user.email}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(enrollment.dataInscricao).toLocaleDateString('pt-BR')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusInfo(enrollment.status).color}`}>
-                      {getStatusInfo(enrollment.status).text}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Button variant="outline" size="sm" onClick={() => onAnalyzeClick(enrollment)}>
-                      Analisar Dossiê
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
 
 export function CourseEnrollmentsPage() {
   const navigate = useNavigate();
   const {
     course,
-    enrollments, // A lista já filtrada pelo hook
-    courseEnrollments, // A lista original para as contagens
+    enrollments, // A lista JÁ FILTRADA pelo hook
+    courseEnrollments, // A lista original, para as contagens
     loading,
     statusFilter,
     setStatusFilter,
@@ -92,6 +24,16 @@ export function CourseEnrollmentsPage() {
   } = useCourseEnrollments();
   
   const [viewingEnrollment, setViewingEnrollment] = useState<Enrollment | null>(null);
+
+  const getStatusInfo = (status: string) => {
+    const statusMap: { [key: string]: { text: string; color: string } } = {
+        'CONFIRMADA': { text: 'Aprovado', color: 'bg-green-100 text-green-800' },
+        'CANCELADA': { text: 'Rejeitado', color: 'bg-red-100 text-red-800' },
+        'AGUARDANDO_VALIDACAO': { text: 'Pendente', color: 'bg-yellow-100 text-yellow-800' },
+        'LISTA_ESPERA': { text: 'Lista de Espera', color: 'bg-blue-100 text-blue-800' },
+    };
+    return statusMap[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
+  };
 
   if (loading || !course) {
     return (
@@ -104,6 +46,18 @@ export function CourseEnrollmentsPage() {
     );
   }
   
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Pega a data de fim das inscrições e zera as horas também.
+  const enrollmentEndDate = new Date(course.dataFimInscricoes);
+  enrollmentEndDate.setHours(0, 0, 0, 0);
+
+  // A análise só é liberada se HOJE for ESTRITAMENTE MAIOR que a data final.
+  // Ex: Se termina dia 20, a análise libera no dia 21.
+  const enrollmentPeriodOver = today > enrollmentEndDate;
+
+  // Contagens para os botões de filtro, usando a lista ORIGINAL
   const countAll = courseEnrollments.length;
   const countInternal = courseEnrollments.filter(e => e.tipoVaga === 'INTERNO').length;
   const countExternal = courseEnrollments.filter(e => e.tipoVaga === 'EXTERNO').length;
@@ -113,8 +67,7 @@ export function CourseEnrollmentsPage() {
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
         <Button variant="outline" onClick={() => navigate(-1)}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Voltar
+          <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
         </Button>
         <div>
             <h1 className="text-3xl font-bold text-gray-900">Análise de Inscrições</h1>
@@ -122,6 +75,13 @@ export function CourseEnrollmentsPage() {
         </div>
       </div>
 
+      {!enrollmentPeriodOver && (
+        <div className="p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-lg text-sm flex items-start space-x-3">
+          <Info className="h-5 w-5 flex-shrink-0 mt-0.5" />
+          <p><strong>Atenção:</strong> As inscrições ainda estão abertas (até {new Date(course.dataFimInscricoes).toLocaleDateString('pt-BR')}). A análise dos dossiês só será liberada após essa data.</p>
+        </div>
+      )}
+      
       <Card>
         <CardContent className="p-4 flex flex-col md:flex-row gap-4 items-center">
             <div className="flex items-center space-x-3">
@@ -150,7 +110,53 @@ export function CourseEnrollmentsPage() {
             <p>Não há inscrições que correspondam aos filtros selecionados.</p>
         </div>
       ) : (
-        <EnrollmentTable title="Inscrições Filtradas" enrollments={enrollments} onAnalyzeClick={setViewingEnrollment} />
+        <Card>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Aluno</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo Vaga</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {enrollments.map((enrollment) => (
+                    <tr key={enrollment.id}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-500">#{enrollment.numeroInscricao}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{enrollment.aluno.user.firstName} {enrollment.aluno.user.lastName}</div>
+                        <div className="text-sm text-gray-500">{enrollment.aluno.user.email}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{enrollment.tipoVaga}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(enrollment.dataInscricao).toLocaleDateString('pt-BR')}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusInfo(enrollment.status).color}`}>
+                          {getStatusInfo(enrollment.status).text}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setViewingEnrollment(enrollment)}
+                          disabled={!enrollmentPeriodOver}
+                          title={!enrollmentPeriodOver ? 'A análise só é liberada após o fim das inscrições.' : 'Analisar inscrição'}
+                        >
+                          Analisar Dossiê
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {viewingEnrollment && (
@@ -158,6 +164,7 @@ export function CourseEnrollmentsPage() {
           enrollment={viewingEnrollment}
           onClose={() => setViewingEnrollment(null)}
           onStatusChange={handleStatusChange}
+          canAnalyze={enrollmentPeriodOver}
         />
       )}
     </div>

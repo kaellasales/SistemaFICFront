@@ -1,10 +1,12 @@
 import api from '@/shared/services/api';
 
 const list = () => {
-
   return api.get('/professor/'); 
 };
 
+const getProfile = () => {
+  return api.get('/professor/me/perfil');
+};
 const getById = (id: string) => {
   return api.get(`/professor/${id}/`);
 }
@@ -22,6 +24,7 @@ export const professorService = {
   list,
   getById,
   create,
-  update
+  update,
+  getProfile
 };
 

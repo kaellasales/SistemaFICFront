@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMyEnrollments } from '@/features/enrollments/hooks/useMyEnrollments'; // <<< O "Gerente" do Aluno
+import { useMyEnrollments } from '@/features/enrollments/hooks/useMyEnrollments';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
@@ -12,7 +12,8 @@ import {
   Search,
   BookOpen,
   Users,
-  Paperclip
+  Paperclip,
+  AlertTriangle
 } from 'lucide-react';
 import { Enrollment } from '@/features/enrollments/types/enrollment.types';
 
@@ -30,12 +31,11 @@ export function EnrollmentsPage() {
   // O estado do modal continua sendo local da página
   const [viewingEnrollment, setViewingEnrollment] = useState<Enrollment | null>(null);
 
-  // --- FUNÇÕES AUXILIARES PARA A UI ---
   const getStatusInfo = (status: string) => {
     const statusMap: { [key: string]: { text: string; icon: React.ElementType; color: string } } = {
       'AGUARDANDO_VALIDACAO': { text: 'Aguardando Validação', icon: Clock, color: 'bg-yellow-100 text-yellow-800' },
       'CONFIRMADA': { text: 'Inscrição Confirmada', icon: CheckCircle, color: 'bg-green-100 text-green-800' },
-      'CANCELADA': { text: 'Cancelada', icon: XCircle, color: 'bg-red-100 text-red-800' },
+      'CANCELADA': { text: 'Rejeitada', icon: XCircle, color: 'bg-red-100 text-red-800' },
       'LISTA_ESPERA': { text: 'Lista de Espera', icon: Users, color: 'bg-blue-100 text-blue-800' },
     };
     return statusMap[status] || { text: status, icon: FileText, color: 'bg-gray-100 text-gray-800' };
@@ -78,10 +78,9 @@ export function EnrollmentsPage() {
         <div className="space-y-4">
           {enrollments.map((enrollment) => {
             const statusInfo = getStatusInfo(enrollment.status);
-            const Icon = statusInfo.icon;
             return (
               <Card key={enrollment.id} className="overflow-hidden">
-                <CardContent className="p-4 flex items-center justify-between gap-4">
+                <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex items-center space-x-4 flex-1">
                     <div className="w-12 h-12 bg-gray-100 rounded-md flex-shrink-0 flex items-center justify-center">
                       <BookOpen className="h-6 w-6 text-gray-500" />
@@ -93,7 +92,7 @@ export function EnrollmentsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 w-full sm:w-auto justify-between mt-2 sm:mt-0">
                     <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${statusInfo.color}`}>
                       {statusInfo.text}
                     </span>
@@ -119,7 +118,7 @@ export function EnrollmentsPage() {
         </div>
       )}
       
-      {/* Modal de Dossiê para o Aluno */}
+      {/* Modal de Dossiê para o Aluno (AGORA COM O MOTIVO DA RECUSA) */}
       {viewingEnrollment && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" onClick={() => setViewingEnrollment(null)}>
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
@@ -137,10 +136,22 @@ export function EnrollmentsPage() {
                 <p className="text-sm text-gray-500">Status da sua Inscrição</p>
                 <p className={`font-semibold ${getStatusInfo(viewingEnrollment.status).color.replace('bg-', 'text-')}`}>{getStatusInfo(viewingEnrollment.status).text}</p>
               </div>
+
+              {/* --- A MÁGICA ESTÁ AQUI --- */}
+              {/* Mostra o motivo da recusa SE a inscrição foi cancelada */}
+              {viewingEnrollment.status === 'CANCELADA' && viewingEnrollment.motivoRecusa && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-lg">
+                  <h4 className="font-semibold flex items-center text-sm">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Motivo da Recusa
+                  </h4>
+                  <p className="text-sm mt-1">{viewingEnrollment.motivoRecusa}</p>
+                </div>
+              )}
               <div className="border-t pt-4">
                 <h3 className="font-semibold text-gray-800 mb-2">Documentos Enviados</h3>
                 {viewingEnrollment.documentos && viewingEnrollment.documentos.length > 0 ? (
-                  <ul className="list-disc list-inside space-y-1 text-sm">
+                  <ul className="list-none pl-0 space-y-2 text-sm">
                     {viewingEnrollment.documentos.map(doc => (
                       <li key={doc.id}>
                         <a href={doc.arquivo} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline flex items-center">

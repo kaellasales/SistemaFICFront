@@ -16,6 +16,10 @@ interface ProfessorState {
 export const useProfessorStore = create<ProfessorState>((set) => ({
   selectedProfessor: null,
   professors: [],
+  fetchProfile: async () => {
+      const response = await professorService.getProfile();
+      return response.data;
+    },
   fetchProfessors: async () => {
     try {
       const response = await professorService.list();

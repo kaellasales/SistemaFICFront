@@ -32,7 +32,7 @@ import { ProfessoresPage } from '@/pages/professor/ProfessoresPage';
 import { ProfessorDetailPage } from '@/pages/professor/ProfessorDetailPage';
 import { EnrollmentPage } from '@/pages/course-enrollment/EnrollmentPage';
 import { AdminCoursesPage } from '@/pages/admin/AdminCoursesPage';
-
+import { ProfilePage } from '@/pages/profile/ProfilePage';
 function App() {
   const { user } = useAuthStore();
   const userGroups = user?.groups || [];
@@ -43,6 +43,7 @@ function App() {
       <Routes>
         {/* --- Rotas Públicas --- */}
         <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />}/>
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         

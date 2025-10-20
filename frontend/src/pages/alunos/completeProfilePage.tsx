@@ -1,16 +1,26 @@
+import { useNavigate } from 'react-router-dom';
 import { useAlunoProfileForm } from '@/features/alunos/hooks/useAlunoProfileForm';
+import { useAuthStore } from '@/shared/stores/authStore';
 import { Button } from '@/components/ui/Button';
 import { ValidatedInput } from '@/components/ui/ValidatedInput';
 import { ValidatedSelect } from '@/components/ui/ValidatedSelect';
 import { Combobox } from '@/components/ui/Combobox'; 
-import { Save } from 'lucide-react';
+import { Save, ArrowLeft } from 'lucide-react';
 
 export function CompleteProfilePage() {
   const { 
     formData, loading, saving, handleChange, handleSubmit,
     formOptions, estados, naturalidadeMunicipios, enderecoMunicipios,
-    naturalidadeSearch, setNaturalidadeSearch, enderecoSearch, setEnderecoSearch
+    naturalidadeSearch, setNaturalidadeSearch, enderecoSearch, setEnderecoSearch,
+    ufExpedidorSearch, setUfExpedidorSearch, naturalidadeUfSearch, setNaturalidadeUfSearch,
+    enderecoUfSearch, setEnderecoUfSearch
   } = useAlunoProfileForm();
+  
+  const navigate = useNavigate();
+  // --- PEGANDO O STATUS DO USUÁRIO ---
+  const { user } = useAuthStore();
+  // Se 'perfil_completo' for 'true', significa que ele já completou uma vez, então está editando.
+  const isEditing = user?.perfil_completo; 
 
   if (loading || !formOptions) {
     return <div>Carregando...</div>;
@@ -18,8 +28,25 @@ export function CompleteProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto p-8">
-      <h1 className="text-3xl font-bold text-gray-800 mb-2">Complete seu Perfil</h1>
-      <p className="text-gray-600 mb-8">Confirme ou preencha suas informações para continuar.</p>
+      {/* --- BOTÃO "VOLTAR" CONDICIONAL --- */}
+      {/* Só aparece se o usuário já tiver o perfil completo (modo de edição) */}
+      {isEditing && (
+        <Button variant="outline" onClick={() => navigate('/profile')} className="mb-6">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar para o Perfil
+        </Button>
+      )}
+
+      {/* --- TÍTULO E DESCRIÇÃO CONDICIONAIS --- */}
+      <h1 className="text-3xl font-bold text-gray-800 mb-2">
+        {isEditing ? 'Editar Perfil' : 'Complete seu Perfil'}
+      </h1>
+      <p className="text-gray-600 mb-8">
+        {isEditing 
+          ? 'Atualize suas informações cadastrais. Os campos marcados são obrigatórios.'
+          : 'Precisamos de mais algumas informações para que você possa se inscrever nos cursos.'
+        }
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-12">
         {/* --- Seção de Dados Pessoais --- */}

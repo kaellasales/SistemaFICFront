@@ -11,7 +11,6 @@ interface CourseState {
   updateCourse: (id: string, payload: any) => Promise<any>;
   fetchCourseById: (id: string) => Promise<void>; 
   clearCourses: () => void;
-  updateCourse: (id: string, data: any) => Promise<any>;
   deleteCourse: (id: number) => Promise<void>; 
 }
 

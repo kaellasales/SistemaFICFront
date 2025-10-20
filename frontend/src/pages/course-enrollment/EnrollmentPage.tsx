@@ -120,7 +120,12 @@ export function EnrollmentPage() {
                 {formData.tipoVaga === 'EXTERNO' && <div className="flex justify-between"><span>Documentos:</span><span className="font-medium">{formData.uploadedFiles?.length || 0} arquivo(s)</span></div>}
               </div>
             </div>
-            <div className="bg-yellow-50 border ..."><p className="text-sm ..."><strong>Atenção:</strong> Sua inscrição será enviada para análise.</p></div>
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-sm text-green-800">
+                <strong>Tudo pronto!</strong> Ao clicar em "Confirmar Inscrição", seus dados serão enviados para análise. 
+                Você receberá um e-mail com o **seu número de inscrição** e os próximos passos.
+              </p>
+            </div>
           </div>
         );
       

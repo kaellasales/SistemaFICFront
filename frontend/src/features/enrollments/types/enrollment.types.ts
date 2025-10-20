@@ -17,12 +17,14 @@ export interface Enrollment {
   status: EnrollmentStatus;
   tipoVaga: 'INTERNO' | 'EXTERNO';
   dataInscricao: string;
-
+  matricula: string;
   documentos?: { id: number; arquivo: string; nomeOriginal: string }[];
+  motivoRecusa?: string;
 }
 
 export interface EnrollmentCreatePayload {
   curso_id: number;
   tipo_vaga: 'INTERNO' | 'EXTERNO';
-  arquivos: File[]; // A lista de arquivos do input de upload
+  matricula: string;
+  arquivos: File[]; 
 }

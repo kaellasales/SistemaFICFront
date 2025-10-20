@@ -60,7 +60,6 @@ const listByCourse = (courseId: string) => {
 };
 
 const listAllPending = () => {
-    // O backend precisa de uma rota que retorne apenas as inscrições com este status
     return api.get('inscricoes-aluno/?status=AGUARDANDO_VALIDACAO');
 };
 
